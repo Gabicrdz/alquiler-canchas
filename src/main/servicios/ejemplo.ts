@@ -3,8 +3,11 @@
 // esta semana y la que viene. Los precios cambian según la franja horaria.
 import type { BaseDeDatos } from '../db/conexion';
 import { esquemaCancha, esquemaCliente, type DatosCancha } from '@compartido/esquemas';
-import { horariosDeCancha, precioDelTurno, senaSugerida, sumarMinutos } from '@compartido/canchas';
+import { bloqueoCubre, horariosDeCancha, precioDelTurno, senaSugerida, sumarMinutos } from '@compartido/canchas';
+import { fechasDeUnDia, sumarDias as sumarDiasTexto } from '@compartido/horarios';
 import type { ResultadoEjemplo } from '@compartido/tipos';
+import { crearAbono } from './abonos';
+import { crearBloqueo } from './bloqueos';
 import { guardarCancha, listarCanchas } from './canchas';
 import { guardarCliente } from './clientes';
 import { resumen } from './complejo';
@@ -140,6 +143,32 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
     const pagar = db.$client.prepare(`INSERT INTO pagos (reserva_id, monto_centavos, metodo, usuario_id) VALUES (?, ?, ?, ?)`);
     const metodos = ['efectivo', 'transferencia', 'mercadopago', 'efectivo', 'tarjeta'] as const;
 
+    // Abonos (turnos fijos con un 10 % de descuento) y dos bloqueos: se cargan ANTES que las
+    // reservas sueltas, que después esquivan esos horarios.
+    const ABONOS = [
+      ['Los Halcones FC', 'Cancha 2', 2, '21:00'],
+      ['Club Social Sur', 'Cancha 1', 4, '22:00'],
+      ['Pádel de los Jueves', 'Pádel 1', 4, '20:00'],
+      ['Las Pumas Pádel', 'Pádel 2', 6, '18:30'],
+    ] as const;
+    for (const [nombreCliente, nombreCancha, dia, desde] of ABONOS) {
+      const cancha = canchas.find((c) => c.nombre === nombreCancha)!;
+      const cliente = clienteIds[CLIENTES.findIndex(([nombre]) => nombre === nombreCliente)]!;
+      const fecha = fechasDeUnDia(dia, hoy, sumarDiasTexto(hoy, 7))[0]!;
+      const precio = Math.round((precioDelTurno(cancha, fecha, desde) * 0.9) / 10_000) * 10_000;
+      crearAbono(db, { canchaId: cancha.id, clienteId: cliente, diaSemana: dia, desde, desdeFecha: hoy, hastaFecha: null, precioCentavos: precio, nota: 'Abono' }, ahora, yo?.id ?? null);
+    }
+    const cancha1 = canchas.find((c) => c.nombre === 'Cancha 1')!;
+    const cancha2 = canchas.find((c) => c.nombre === 'Cancha 2')!;
+    const bloqueosEjemplo = [
+      { canchaId: cancha1.id, fechaDesde: sumarDiasTexto(hoy, 2), fechaHasta: sumarDiasTexto(hoy, 2), desde: '15:00', hasta: '19:00', motivo: 'mantenimiento' as const, nota: 'pintura de líneas' },
+      { canchaId: cancha2.id, fechaDesde: sumarDiasTexto(hoy, 4), fechaHasta: sumarDiasTexto(hoy, 4), desde: null, hasta: null, motivo: 'lluvia' as const, nota: '' },
+    ];
+    for (const b of bloqueosEjemplo) crearBloqueo(db, { ...b, cancelarReservas: true, devolverSena: true }, ahora);
+    const ocupado = db.$client.prepare(
+      `SELECT 1 FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado <> 'cancelada' AND desde < ? AND ? < hasta`,
+    );
+
     let n = 0;
     // Una semana atrás y dos adelante: el lunes de esta semana ± unos días
     for (let d = -7; d <= 14; d++) {
@@ -154,6 +183,7 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
           const probabilidad = (noche ? 0.62 : 0.28) + (finde ? 0.22 : 0) - (d > 0 ? Math.min(0.25, 0.03 * d) : 0);
           if (semilla(n) > probabilidad) continue;
           const hasta = sumarMinutos(desde, cancha.duracionMin);
+          if (bloqueosEjemplo.some((b) => bloqueoCubre(b, cancha.id, fecha, desde, hasta)) || ocupado.get(cancha.id, fecha, hasta, desde)) continue;
           const precio = precioDelTurno(cancha, fecha, desde);
           const cliente = clienteIds[Math.floor(semilla(n + 500) * clienteIds.length)]!;
           const pasada = fecha < hoy || (fecha === hoy && hasta <= horaAhora);

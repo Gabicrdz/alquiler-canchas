@@ -3,10 +3,11 @@
 // sea uno de los de la cancha) se controlan ACÁ además de en la ventana.
 import type { z } from 'zod';
 import type { BaseDeDatos } from '../db/conexion';
-import type { esquemaCancelacion, esquemaRango, esquemaReserva } from '@compartido/esquemas';
+import type { esquemaCancelacion, esquemaMover, esquemaRango, esquemaReserva } from '@compartido/esquemas';
 import { estadoDePago, esHorarioDeCancha, estadosPosibles, precioDelTurno, sePuedeCancelar, sumarMinutos, type EstadoReserva } from '@compartido/canchas';
 import { pesos } from '@compartido/dinero';
 import type { PagoDeReserva, Reserva } from '@compartido/tipos';
+import { bloqueoQueCubre, textoDelBloqueo } from './bloqueos';
 import { obtenerCancha } from './canchas';
 import { ErrorDeUsuario } from './errores';
 import { fechaLocal, horaLocal, momentoLocal } from './fechas';
@@ -16,7 +17,7 @@ interface Fila extends Omit<Reserva, 'pagadoCentavos' | 'estadoDePago' | 'pagos'
 const SELECT = `
   SELECT r.id, r.cancha_id AS canchaId, r.cliente_id AS clienteId, r.fecha, r.desde, r.hasta, r.estado,
          r.precio_centavos AS precioCentavos, r.nota, c.nombre AS cliente, c.telefono,
-         u.nombre AS dadoPor, r.creado_en AS creadoEn
+         u.nombre AS dadoPor, r.creado_en AS creadoEn, r.abono_id AS abonoId
     FROM reservas r
     JOIN clientes c ON c.id = r.cliente_id
     LEFT JOIN usuarios u ON u.id = r.dado_por`;
@@ -66,6 +67,8 @@ export function crearReserva(db: BaseDeDatos, datos: z.output<typeof esquemaRese
   if (datos.fecha < fechaLocal(ahora) || (datos.fecha === fechaLocal(ahora) && hasta <= horaLocal(ahora))) {
     throw new ErrorDeUsuario('Ese horario ya pasó.');
   }
+  const bloqueo = bloqueoQueCubre(db, datos.canchaId, datos.fecha, datos.desde, hasta);
+  if (bloqueo) throw new ErrorDeUsuario(`${cancha.nombre} está cerrada en ese horario: ${textoDelBloqueo(bloqueo)}.`);
   const precio = datos.precioCentavos ?? precioDelTurno(cancha, datos.fecha, datos.desde);
   if (datos.senaCentavos > precio) throw new ErrorDeUsuario('La seña no puede ser más que el precio.');
 
@@ -117,6 +120,44 @@ export function cancelarReserva(db: BaseDeDatos, datos: z.output<typeof esquemaC
     db.$client.prepare(`UPDATE reservas SET estado = 'cancelada', actualizado_en = datetime('now', 'localtime') WHERE id = ?`).run(datos.id);
     if (datos.devolverSena) {
       db.$client.prepare('UPDATE pagos SET anulado = 1, anulado_en = ? WHERE reserva_id = ? AND anulado = 0').run(momentoLocal(ahora), datos.id);
+    }
+  })();
+}
+
+/**
+ * Cambia una reserva pendiente de cancha, día u hora. Conserva el precio pactado y los pagos.
+ * Si era un turno de un abono, el lugar de origen queda anotado como cancelado (así el abono
+ * no lo vuelve a cargar solo) y la reserva movida pasa a ser una reserva suelta.
+ */
+export function moverReserva(db: BaseDeDatos, datos: z.output<typeof esquemaMover>, ahora: Date = new Date()): void {
+  const r = obtenerReserva(db, datos.id);
+  if (r.estado !== 'reservada') throw new ErrorDeUsuario('Solo se pueden mover las reservas pendientes.');
+  const destino = obtenerCancha(db, datos.canchaId);
+  if (!destino.activo) throw new ErrorDeUsuario(`${destino.nombre} está dada de baja.`);
+  if (!esHorarioDeCancha(destino, datos.desde)) throw new ErrorDeUsuario(`${destino.nombre} no tiene turno a las ${datos.desde}.`);
+  const origen = obtenerCancha(db, r.canchaId);
+  if (destino.duracionMin !== origen.duracionMin) {
+    throw new ErrorDeUsuario(`${destino.nombre} tiene turnos de ${destino.duracionMin} minutos y esta reserva es de ${origen.duracionMin}. Elegí una cancha con la misma duración.`);
+  }
+  const hasta = sumarMinutos(datos.desde, destino.duracionMin);
+  if (datos.canchaId === r.canchaId && datos.fecha === r.fecha && datos.desde === r.desde) throw new ErrorDeUsuario('La reserva ya está en ese horario.');
+  if (datos.fecha < fechaLocal(ahora) || (datos.fecha === fechaLocal(ahora) && hasta <= horaLocal(ahora))) throw new ErrorDeUsuario('Ese horario ya pasó.');
+  const bloqueo = bloqueoQueCubre(db, datos.canchaId, datos.fecha, datos.desde, hasta);
+  if (bloqueo) throw new ErrorDeUsuario(`${destino.nombre} está cerrada en ese horario: ${textoDelBloqueo(bloqueo)}.`);
+
+  db.$client.transaction(() => {
+    try {
+      db.$client
+        .prepare(`UPDATE reservas SET cancha_id = ?, fecha = ?, desde = ?, hasta = ?, abono_id = NULL, actualizado_en = datetime('now', 'localtime') WHERE id = ?`)
+        .run(datos.canchaId, datos.fecha, datos.desde, hasta, datos.id);
+    } catch (error) {
+      if (esSuperposicion(error)) throw new ErrorDeUsuario('Ese horario ya está reservado.');
+      throw error;
+    }
+    if (r.abonoId !== null) {
+      db.$client
+        .prepare(`INSERT INTO reservas (cancha_id, cliente_id, fecha, desde, hasta, estado, precio_centavos, nota, abono_id) VALUES (?, ?, ?, ?, ?, 'cancelada', ?, ?, ?)`)
+        .run(r.canchaId, r.clienteId, r.fecha, r.desde, r.hasta, r.precioCentavos, 'Turno movido a otro horario', r.abonoId);
     }
   })();
 }

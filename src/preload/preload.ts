@@ -33,6 +33,19 @@ const api: ApiCanchas = {
     crear: (datos) => pedir(CANALES.reservasCrear, datos),
     cambiarEstado: (id, estado) => pedir(CANALES.reservasEstado, id, estado),
     cancelar: (datos) => pedir(CANALES.reservasCancelar, datos),
+    mover: (datos) => pedir(CANALES.reservasMover, datos),
+  },
+  abonos: {
+    listar: () => pedir(CANALES.abonosListar),
+    crear: (datos) => pedir(CANALES.abonosCrear, datos),
+    terminar: (datos) => pedir(CANALES.abonosTerminar, datos),
+  },
+  bloqueos: {
+    listar: () => pedir(CANALES.bloqueosListar),
+    rango: (rango) => pedir(CANALES.bloqueosRango, rango),
+    afectadas: (datos) => pedir(CANALES.bloqueosAfectadas, datos),
+    crear: (datos) => pedir(CANALES.bloqueosCrear, datos),
+    quitar: (id) => pedir(CANALES.bloqueosQuitar, id),
   },
   pagos: {
     registrar: (datos) => pedir(CANALES.pagosRegistrar, datos),

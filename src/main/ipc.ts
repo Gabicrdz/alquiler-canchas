@@ -13,7 +13,11 @@ import {
   esquemaCancha,
   esquemaCliente,
   esquemaComplejo,
+  esquemaAbono,
+  esquemaBloqueo,
   esquemaEstado,
+  esquemaMover,
+  esquemaTerminarAbono,
   esquemaPago,
   esquemaPin,
   esquemaRango,
@@ -26,7 +30,10 @@ import { obtenerDb } from './db/conexion';
 import { ErrorDeUsuario } from './servicios/errores';
 import { cambiarActivoCancha, guardarCancha, listarCanchas } from './servicios/canchas';
 import { buscarClientes, cambiarActivoCliente, guardarCliente } from './servicios/clientes';
-import { cancelarReserva, cambiarEstado, crearReserva, reservasDelRango } from './servicios/reservas';
+import { cancelarReserva, cambiarEstado, crearReserva, moverReserva, reservasDelRango } from './servicios/reservas';
+import { fechaLocal } from './servicios/fechas';
+import { crearAbono, extenderAbonos, listarAbonos, terminarAbono } from './servicios/abonos';
+import { bloqueosDelRango, contarAfectadas, crearBloqueo, listarBloqueos, quitarBloqueo } from './servicios/bloqueos';
 import { anularPago, registrarPago } from './servicios/pagos';
 import { guardarComplejo, obtenerComplejo, resumen } from './servicios/complejo';
 import { cargarEjemplo } from './servicios/ejemplo';
@@ -69,6 +76,14 @@ const activo = z.boolean();
 
 export function registrarCanales(info: () => InfoSistema): void {
   const db = () => obtenerDb();
+  // Los abonos cargan sus turnos con 8 semanas de anticipación: se revisa una vez por día
+  let diaRevisado = '';
+  const mantenerAbonos = () => {
+    const hoy = fechaLocal(new Date());
+    if (hoy === diaRevisado) return;
+    extenderAbonos(db());
+    diaRevisado = hoy;
+  };
 
   // ── Sesión y usuarios ──
   manejar(CANALES.sesionActual, 'libre', nada, () => sesionActual());
@@ -112,7 +127,10 @@ export function registrarCanales(info: () => InfoSistema): void {
   });
 
   // ── Reservas y pagos ──
-  manejar(CANALES.reservasRango, 'sesion', z.tuple([esquemaRango]), (rango) => reservasDelRango(db(), rango));
+  manejar(CANALES.reservasRango, 'sesion', z.tuple([esquemaRango]), (rango) => {
+    mantenerAbonos();
+    return reservasDelRango(db(), rango);
+  });
   manejar(CANALES.reservasCrear, 'sesion', z.tuple([esquemaReserva]), (datos, yo) => crearReserva(db(), datos, new Date(), yo.id));
   manejar(CANALES.reservasEstado, 'sesion', z.tuple([id, esquemaEstado]), (rid, estado) => {
     cambiarEstado(db(), rid, estado);
@@ -122,6 +140,27 @@ export function registrarCanales(info: () => InfoSistema): void {
     cancelarReserva(db(), datos);
     return null;
   });
+  manejar(CANALES.reservasMover, 'sesion', z.tuple([esquemaMover]), (datos) => {
+    moverReserva(db(), datos);
+    return null;
+  });
+
+  // ── Abonos y bloqueos ──
+  manejar(CANALES.abonosListar, 'sesion', nada, () => {
+    mantenerAbonos();
+    return listarAbonos(db());
+  });
+  manejar(CANALES.abonosCrear, 'sesion', z.tuple([esquemaAbono]), (datos, yo) => crearAbono(db(), datos, new Date(), yo.id));
+  manejar(CANALES.abonosTerminar, 'admin', z.tuple([esquemaTerminarAbono]), (datos) => terminarAbono(db(), datos));
+  manejar(CANALES.bloqueosListar, 'sesion', nada, () => listarBloqueos(db()));
+  manejar(CANALES.bloqueosRango, 'sesion', z.tuple([esquemaRango]), (rango) => bloqueosDelRango(db(), rango));
+  manejar(CANALES.bloqueosAfectadas, 'sesion', z.tuple([esquemaBloqueo]), (datos) => contarAfectadas(db(), datos));
+  manejar(CANALES.bloqueosCrear, 'sesion', z.tuple([esquemaBloqueo]), (datos) => crearBloqueo(db(), datos));
+  manejar(CANALES.bloqueosQuitar, 'sesion', z.tuple([id]), (bid) => {
+    quitarBloqueo(db(), bid);
+    return null;
+  });
+
   manejar(CANALES.pagosRegistrar, 'sesion', z.tuple([esquemaPago]), (datos, yo) => registrarPago(db(), datos, yo.id));
   manejar(CANALES.pagosAnular, 'sesion', z.tuple([id]), (pid, yo) => {
     anularPago(db(), pid, yo);

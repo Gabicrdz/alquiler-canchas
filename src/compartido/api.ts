@@ -1,18 +1,22 @@
 // El contrato entre la ventana y el main: qué funciones existen, qué reciben
 // y qué devuelven. El preload lo implementa; la ventana lo usa como window.canchas.
 import type {
+  DatosAbono,
+  DatosBloqueo,
   DatosBuscarClientes,
   DatosCancelacion,
   DatosCancha,
   DatosCliente,
   DatosComplejo,
+  DatosMover,
   DatosPago,
   DatosRango,
   DatosReserva,
+  DatosTerminarAbono,
   DatosUsuario,
 } from './esquemas';
 import type { EstadoReserva } from './canchas';
-import type { Cancha, Cliente, Complejo, CopiaElegida, EstadoCopias, InfoCopia, InfoSistema, Reserva, Respuesta, ResultadoEjemplo, Resumen, Usuario } from './tipos';
+import type { Abono, Bloqueo, Cancha, Cliente, Complejo, CopiaElegida, EstadoCopias, InfoCopia, InfoSistema, Reserva, Respuesta, ResultadoAbono, ResultadoBloqueo, ResultadoEjemplo, Resumen, Usuario } from './tipos';
 
 export interface ApiCanchas {
   sesion: {
@@ -46,6 +50,24 @@ export interface ApiCanchas {
     crear(datos: DatosReserva): Promise<Respuesta<number>>;
     cambiarEstado(id: number, estado: EstadoReserva): Promise<Respuesta<null>>;
     cancelar(datos: DatosCancelacion): Promise<Respuesta<null>>;
+    /** Cambia una reserva pendiente de cancha, día u hora (conserva el precio y los pagos). */
+    mover(datos: DatosMover): Promise<Respuesta<null>>;
+  };
+  abonos: {
+    listar(): Promise<Respuesta<Abono[]>>;
+    crear(datos: DatosAbono): Promise<Respuesta<ResultadoAbono>>;
+    /** Termina el abono y cancela sus turnos que todavía no se jugaron. Devuelve cuántos canceló. */
+    terminar(datos: DatosTerminarAbono): Promise<Respuesta<number>>;
+  };
+  bloqueos: {
+    /** Los vigentes y los que vienen (no los que ya pasaron). */
+    listar(): Promise<Respuesta<Bloqueo[]>>;
+    /** Los que tocan un rango de días (para pintar la grilla). */
+    rango(rango: DatosRango): Promise<Respuesta<Bloqueo[]>>;
+    /** Cuántas reservas se cancelarían si se crea este bloqueo. */
+    afectadas(datos: DatosBloqueo): Promise<Respuesta<number>>;
+    crear(datos: DatosBloqueo): Promise<Respuesta<ResultadoBloqueo>>;
+    quitar(id: number): Promise<Respuesta<null>>;
   };
   pagos: {
     registrar(datos: DatosPago): Promise<Respuesta<number>>;
@@ -91,6 +113,15 @@ export const CANALES = {
   reservasCrear: 'reservas:crear',
   reservasEstado: 'reservas:estado',
   reservasCancelar: 'reservas:cancelar',
+  reservasMover: 'reservas:mover',
+  abonosListar: 'abonos:listar',
+  abonosCrear: 'abonos:crear',
+  abonosTerminar: 'abonos:terminar',
+  bloqueosListar: 'bloqueos:listar',
+  bloqueosRango: 'bloqueos:rango',
+  bloqueosAfectadas: 'bloqueos:afectadas',
+  bloqueosCrear: 'bloqueos:crear',
+  bloqueosQuitar: 'bloqueos:quitar',
   pagosRegistrar: 'pagos:registrar',
   pagosAnular: 'pagos:anular',
   complejoObtener: 'complejo:obtener',

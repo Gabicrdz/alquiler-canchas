@@ -8,6 +8,7 @@ import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Estructura } from '@/components/layout/estructura';
 import { PaginaReservas } from '@/features/reservas/pagina-reservas';
+import { PaginaAbonos } from '@/features/abonos/pagina-abonos';
 import { PaginaClientes } from '@/features/clientes/pagina-clientes';
 import { PaginaCanchas } from '@/features/canchas/pagina-canchas';
 import { PaginaAjustes } from '@/features/ajustes/pagina-ajustes';
@@ -22,6 +23,7 @@ const router = createHashRouter([
     element: <Estructura />,
     children: [
       { index: true, element: <PaginaReservas /> },
+      { path: 'abonos', element: <PaginaAbonos /> },
       { path: 'clientes', element: <PaginaClientes /> },
       { path: 'canchas', element: <SoloAdmin><PaginaCanchas /></SoloAdmin> },
       { path: 'ajustes', element: <SoloAdmin><PaginaAjustes /></SoloAdmin> },

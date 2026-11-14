@@ -133,3 +133,31 @@ export function senaSugerida(precioCentavos: number, porcentaje: number): number
   const cruda = (precioCentavos * porcentaje) / 100;
   return Math.min(precioCentavos, Math.round(cruda / 10_000) * 10_000);
 }
+
+// ---------- Bloqueos (lluvia, mantenimiento…) ----------
+export const MOTIVOS_BLOQUEO = ['lluvia', 'mantenimiento', 'torneo', 'otro'] as const;
+export type MotivoBloqueo = (typeof MOTIVOS_BLOQUEO)[number];
+export const NOMBRE_MOTIVO: Record<MotivoBloqueo, string> = {
+  lluvia: 'Lluvia',
+  mantenimiento: 'Mantenimiento',
+  torneo: 'Torneo',
+  otro: 'Otro motivo',
+};
+
+export interface BloqueoBasico {
+  /** null = todas las canchas. */
+  canchaId: number | null;
+  fechaDesde: string;
+  fechaHasta: string;
+  /** null en los dos = todo el día. */
+  desde: string | null;
+  hasta: string | null;
+}
+
+/** ¿El bloqueo tapa este turno (esa cancha, ese día y ese horario)? */
+export function bloqueoCubre(b: BloqueoBasico, canchaId: number, fecha: string, desde: string, hasta: string): boolean {
+  if (b.canchaId !== null && b.canchaId !== canchaId) return false;
+  if (fecha < b.fechaDesde || fecha > b.fechaHasta) return false;
+  if (b.desde === null || b.hasta === null) return true;
+  return seSuperponen({ desde, hasta }, { desde: b.desde, hasta: b.hasta });
+}

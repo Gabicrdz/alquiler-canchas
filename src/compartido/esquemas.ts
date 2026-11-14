@@ -3,7 +3,7 @@
 // TypeScript saca de acá los tipos, así la ventana y el main hablan igual.
 import { z } from 'zod';
 import { aMinutos, esHora } from './horarios';
-import { DEPORTES, ESTADOS, TIPOS_DE_DIA, esHoraFin } from './canchas';
+import { DEPORTES, ESTADOS, MOTIVOS_BLOQUEO, TIPOS_DE_DIA, esHoraFin } from './canchas';
 
 export const id = z.number().int().positive();
 const texto = (campo: string, maximo: number) =>
@@ -163,3 +163,59 @@ export const esquemaUsuario = z.object({
   pin: z.union([esquemaPin, z.literal('')]).default(''),
 });
 export type DatosUsuario = z.input<typeof esquemaUsuario>;
+
+// ---------- Mover una reserva ----------
+export const esquemaMover = z.object({
+  id,
+  canchaId: id,
+  fecha: esquemaFecha,
+  desde: esquemaHora,
+});
+export type DatosMover = z.input<typeof esquemaMover>;
+
+// ---------- Abonos (turno fijo todas las semanas) ----------
+export const esquemaAbono = z
+  .object({
+    canchaId: id,
+    clienteId: id,
+    /** 1 = lunes … 7 = domingo. */
+    diaSemana: z.number().int().min(1).max(7),
+    desde: esquemaHora,
+    desdeFecha: esquemaFecha,
+    /** Sin fecha de fin = sigue hasta que se lo termine. */
+    hastaFecha: esquemaFecha.nullable().default(null),
+    /** El precio de cada turno del abono (puede tener descuento). */
+    precioCentavos: dinero(),
+    nota: textoOpcional(120),
+  })
+  .refine((a) => a.hastaFecha === null || a.hastaFecha >= a.desdeFecha, { message: '"Hasta" no puede ser antes que "desde".', path: ['hastaFecha'] });
+export type DatosAbono = z.input<typeof esquemaAbono>;
+
+export const esquemaTerminarAbono = z.object({
+  id,
+  /** Qué pasa con lo que ya pagaron los turnos futuros que se cancelan. */
+  devolverSena: z.boolean(),
+});
+export type DatosTerminarAbono = z.input<typeof esquemaTerminarAbono>;
+
+// ---------- Bloqueos (lluvia, mantenimiento…) ----------
+export const esquemaBloqueo = z
+  .object({
+    /** null = todas las canchas. */
+    canchaId: id.nullable(),
+    fechaDesde: esquemaFecha,
+    fechaHasta: esquemaFecha,
+    /** Los dos null = todo el día. */
+    desde: esquemaHora.nullable().default(null),
+    hasta: esquemaHoraFin.nullable().default(null),
+    motivo: z.enum(MOTIVOS_BLOQUEO, { message: 'Elegí el motivo.' }),
+    nota: textoOpcional(120),
+    /** Si hay reservas en ese horario: ¿se cancelan? (si no, el bloqueo no se crea) */
+    cancelarReservas: z.boolean().default(false),
+    /** Al cancelarlas, ¿se devuelve lo que ya pagaron? */
+    devolverSena: z.boolean().default(true),
+  })
+  .refine((b) => b.fechaDesde <= b.fechaHasta, { message: '"Hasta" no puede ser antes que "desde".', path: ['fechaHasta'] })
+  .refine((b) => (b.desde === null) === (b.hasta === null), { message: 'Elegí las dos horas, o ninguna para bloquear todo el día.', path: ['desde'] })
+  .refine((b) => b.desde === null || b.hasta === null || aMinutos(b.desde) < aMinutos(b.hasta), { message: '"Desde" tiene que ser antes que "hasta".', path: ['desde'] });
+export type DatosBloqueo = z.input<typeof esquemaBloqueo>;

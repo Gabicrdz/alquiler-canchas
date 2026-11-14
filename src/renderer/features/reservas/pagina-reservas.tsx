@@ -3,16 +3,17 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { addDays, format, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Goal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CloudRain, Goal } from 'lucide-react';
 import { horariosDeCancha } from '@compartido/canchas';
 import type { Cancha } from '@compartido/tipos';
 import { Button } from '@/components/ui/button';
 import { Encabezado, Vacio } from '@/features/comun/encabezado';
-import { useCanchas, useCargarEjemplo, useReservas } from '@/features/comun/consultas';
+import { useBloqueos, useCanchas, useCargarEjemplo, useReservas } from '@/features/comun/consultas';
 import { useUsuario } from '@/features/sesion/consultas';
 import { useAhora } from '@/lib/ahora';
 import { fechaISO, fechaLarga } from '@/lib/fechas';
 import { DetalleReserva } from './detalle-reserva';
+import { DialogoBloqueo } from './dialogo-bloqueo';
 import { DialogoReserva } from './dialogo-reserva';
 import { diasDeLaSemana, FranjaSemana } from './franja-semana';
 import { Grilla } from './grilla';
@@ -23,12 +24,14 @@ export function PaginaReservas() {
   const [fecha, setFecha] = useState(() => fechaISO());
   const [nueva, setNueva] = useState<{ cancha: Cancha; desde: string } | null>(null);
   const [abierta, setAbierta] = useState<number | null>(null);
+  const [bloqueando, setBloqueando] = useState(false);
   const { esAdmin } = useUsuario();
   const cargarEjemplo = useCargarEjemplo();
 
   const semana = useMemo(() => diasDeLaSemana(fecha), [fecha]);
   const canchas = useCanchas();
   const reservas = useReservas({ desde: semana[0]!, hasta: semana[6]! });
+  const bloqueos = useBloqueos({ desde: semana[0]!, hasta: semana[6]! });
   const activas = (canchas.data ?? []).filter((c) => c.activo);
   const delDia = (reservas.data ?? []).filter((r) => r.fecha === fecha);
   const reserva = (reservas.data ?? []).find((r) => r.id === abierta) ?? null;
@@ -79,6 +82,9 @@ export function PaginaReservas() {
           <p className="mt-2 text-[17px] font-semibold text-tinta first-letter:uppercase">{fechaLarga(fecha)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setBloqueando(true)}>
+            <CloudRain aria-hidden="true" /> Bloquear
+          </Button>
           <Button variant="outline" size="icon" aria-label="Día anterior" onClick={() => mover(-1)}>
             <ChevronLeft aria-hidden="true" />
           </Button>
@@ -107,8 +113,9 @@ export function PaginaReservas() {
           {reservas.error.message}
         </p>
       ) : (
-        <Grilla fecha={fecha} hoy={hoy} ahora={ahora} canchas={activas} reservas={delDia} alReservar={(cancha, desde) => setNueva({ cancha, desde })} alAbrir={(r) => setAbierta(r.id)} />
+        <Grilla fecha={fecha} hoy={hoy} ahora={ahora} canchas={activas} reservas={delDia} bloqueos={bloqueos.data ?? []} alReservar={(cancha, desde) => setNueva({ cancha, desde })} alAbrir={(r) => setAbierta(r.id)} />
       )}
+      <DialogoBloqueo abierto={bloqueando} fechaInicial={fecha} alCerrar={() => setBloqueando(false)} />
       <DialogoReserva turno={nueva} fecha={fecha} alCerrar={() => setNueva(null)} />
       <DetalleReserva reserva={reserva} cancha={activas.find((c) => c.id === reserva?.canchaId) ?? (canchas.data ?? []).find((c) => c.id === reserva?.canchaId)} hoy={hoy} alCerrar={() => setAbierta(null)} />
     </div>

@@ -73,6 +73,7 @@ export const reservas = sqliteTable('reservas', {
   precioCentavos: integer('precio_centavos').notNull(),
   nota: text('nota').notNull().default(''),
   dadoPor: integer('dado_por').references(() => usuarios.id),
+  abonoId: integer('abono_id'),
   creadoEn: text('creado_en').notNull().default(ahora),
   actualizadoEn: text('actualizado_en').notNull().default(ahora),
 });
@@ -87,5 +88,37 @@ export const pagos = sqliteTable('pagos', {
   anulado: integer('anulado', { mode: 'boolean' }).notNull().default(false),
   anuladoEn: text('anulado_en'),
   usuarioId: integer('usuario_id').references(() => usuarios.id),
+  creadoEn: text('creado_en').notNull().default(ahora),
+});
+
+export const abonos = sqliteTable('abonos', {
+  id: integer('id').primaryKey(),
+  canchaId: integer('cancha_id')
+    .notNull()
+    .references(() => canchas.id),
+  clienteId: integer('cliente_id')
+    .notNull()
+    .references(() => clientes.id),
+  diaSemana: integer('dia_semana').notNull(),
+  desde: text('desde').notNull(),
+  hasta: text('hasta').notNull(),
+  desdeFecha: text('desde_fecha').notNull(),
+  hastaFecha: text('hasta_fecha'),
+  precioCentavos: integer('precio_centavos').notNull(),
+  nota: text('nota').notNull().default(''),
+  activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
+  creadoEn: text('creado_en').notNull().default(ahora),
+});
+
+export const bloqueos = sqliteTable('bloqueos', {
+  id: integer('id').primaryKey(),
+  canchaId: integer('cancha_id').references(() => canchas.id),
+  fechaDesde: text('fecha_desde').notNull(),
+  fechaHasta: text('fecha_hasta').notNull(),
+  desde: text('desde'),
+  hasta: text('hasta'),
+  motivo: text('motivo', { enum: ['lluvia', 'mantenimiento', 'torneo', 'otro'] }).notNull(),
+  nota: text('nota').notNull().default(''),
+  activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
   creadoEn: text('creado_en').notNull().default(ahora),
 });

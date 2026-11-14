@@ -2,7 +2,7 @@
 // marcar si jugó o no vino, y cancelar (decidiendo qué pasa con la seña).
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Ban, CalendarClock, Phone, Undo2 } from 'lucide-react';
+import { Ban, CalendarClock, MoveRight, Phone, Repeat, Undo2 } from 'lucide-react';
 import { METODOS, NOMBRE_METODO } from '@compartido/esquemas';
 import { estadosPosibles, NOMBRE_ESTADO, sePuedeCancelar, type EstadoReserva } from '@compartido/canchas';
 import { pesos } from '@compartido/dinero';
@@ -14,15 +14,18 @@ import { CanchaDibujo } from '@/components/layout/cancha-dibujo';
 import { desenvolver, canchas } from '@/lib/api';
 import { fechaLarga } from '@/lib/fechas';
 import { cn } from '@/lib/utils';
-import { CLAVES, useAccion } from '@/features/comun/consultas';
+import { CLAVES, useAccion, useCanchas } from '@/features/comun/consultas';
 import { useUsuario } from '@/features/sesion/consultas';
 import { COLOR } from './estilos';
+import { DialogoMover } from './dialogo-mover';
 
 export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Reserva | null; cancha: Cancha | undefined; hoy: string; alCerrar: () => void }) {
   const { esAdmin } = useUsuario();
   const [monto, setMonto] = useState<number | null>(0);
   const [metodo, setMetodo] = useState<(typeof METODOS)[number]>('efectivo');
   const [cancelando, setCancelando] = useState(false);
+  const [moviendo, setMoviendo] = useState(false);
+  const todasLasCanchas = useCanchas();
   const [error, setError] = useState('');
 
   const saldo = reserva ? reserva.precioCentavos - reserva.pagadoCentavos : 0;
@@ -31,9 +34,12 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
     setMonto(saldo);
     setError('');
   }, [reserva?.id, saldo]);
-  useEffect(() => setCancelando(false), [reserva?.id]);
+  useEffect(() => {
+    setCancelando(false);
+    setMoviendo(false);
+  }, [reserva?.id]);
 
-  const refrescar = [CLAVES.reservas, CLAVES.clientes];
+  const refrescar = [CLAVES.reservas, CLAVES.clientes, CLAVES.abonos];
   const cobrar = useAccion((d: { reservaId: number; montoCentavos: number; metodo: (typeof METODOS)[number] }) => desenvolver(canchas().pagos.registrar(d)), refrescar, 'Pago registrado');
   const anular = useAccion((id: number) => desenvolver(canchas().pagos.anular(id)), refrescar, 'Pago anulado');
   const estado = useAccion(({ id, e }: { id: number; e: EstadoReserva }) => desenvolver(canchas().reservas.cambiarEstado(id, e)), refrescar, 'Listo');
@@ -52,7 +58,8 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
   }
 
   return (
-    <Dialog open={reserva !== null} onOpenChange={(a) => !a && alCerrar()}>
+    <>
+    <Dialog open={reserva !== null && !moviendo} onOpenChange={(a) => !a && alCerrar()}>
       <DialogContent className="max-w-[560px] [&>button[aria-label=Cerrar]]:text-white [&>button[aria-label=Cerrar]]:hover:bg-white/15 [&>button[aria-label=Cerrar]]:hover:text-white">
         {reserva && cancha && (
           <>
@@ -71,6 +78,11 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
                 {reserva.telefono && (
                   <span className="flex items-center gap-1">
                     <Phone className="size-3.5" aria-hidden="true" /> {reserva.telefono}
+                  </span>
+                )}
+                {reserva.abonoId !== null && (
+                  <span className="flex items-center gap-1 font-semibold text-acento">
+                    <Repeat className="size-3.5" aria-hidden="true" /> Abono (turno fijo)
                   </span>
                 )}
                 {reserva.nota && <span>“{reserva.nota}”</span>}
@@ -206,6 +218,11 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
                 )}
               </div>
               <div className="flex gap-2">
+                {reserva.estado === 'reservada' && (
+                  <Button variant="outline" onClick={() => setMoviendo(true)}>
+                    <MoveRight aria-hidden="true" /> Mover
+                  </Button>
+                )}
                 {sePuedeCancelar(reserva.estado) && !cancelando && (
                   <Button variant="ghost-destructive" onClick={() => setCancelando(true)}>
                     Cancelar reserva
@@ -220,5 +237,7 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
         )}
       </DialogContent>
     </Dialog>
+      <DialogoMover reserva={moviendo ? reserva : null} canchas={(todasLasCanchas.data ?? []).filter((x) => x.activo)} hoy={hoy} alCerrar={() => setMoviendo(false)} alMover={alCerrar} />
+    </>
   );
 }

@@ -1,6 +1,6 @@
 // Tipos que comparten el main y la ventana (lo que VUELVE del main).
 import type { METODOS, ROLES } from './esquemas';
-import type { Deporte, EstadoDePago, EstadoReserva, Tarifa } from './canchas';
+import type { Deporte, EstadoDePago, EstadoReserva, MotivoBloqueo, Tarifa } from './canchas';
 
 export type Respuesta<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -77,6 +77,8 @@ export interface Reserva {
   /** Quién cargó la reserva (null si se cargó antes de que hubiera usuarios) y cuándo. */
   dadoPor: string | null;
   creadoEn: string;
+  /** Si es un turno de un abono fijo, de cuál (si no, null). */
+  abonoId: number | null;
 }
 
 export type Rol = (typeof ROLES)[number];
@@ -114,4 +116,53 @@ export interface EstadoCopias {
 export interface CopiaElegida {
   nombre: string;
   descripcion: string;
+}
+
+// ---------- Abonos y bloqueos ----------
+export interface Abono {
+  id: number;
+  canchaId: number;
+  cancha: string;
+  deporte: Deporte;
+  clienteId: number;
+  cliente: string;
+  telefono: string;
+  /** 1 = lunes … 7 = domingo. */
+  diaSemana: number;
+  desde: string;
+  hasta: string;
+  desdeFecha: string;
+  hastaFecha: string | null;
+  precioCentavos: number;
+  nota: string;
+  activo: boolean;
+  /** El próximo turno que le toca (null si no tiene ninguno pendiente) y cuántos tiene cargados por delante. */
+  proxima: string | null;
+  pendientes: number;
+}
+
+export interface ResultadoAbono {
+  id: number;
+  creadas: number;
+  /** Fechas que no se pudieron reservar (ya estaban ocupadas, bloqueadas, etc.). */
+  omitidas: { fecha: string; motivo: string }[];
+}
+
+export interface Bloqueo {
+  id: number;
+  canchaId: number | null;
+  /** null = todas las canchas. */
+  cancha: string | null;
+  fechaDesde: string;
+  fechaHasta: string;
+  desde: string | null;
+  hasta: string | null;
+  motivo: MotivoBloqueo;
+  nota: string;
+}
+
+export interface ResultadoBloqueo {
+  id: number;
+  /** Cuántas reservas se cancelaron para poder bloquear. */
+  canceladas: number;
 }

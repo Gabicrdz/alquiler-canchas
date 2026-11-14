@@ -1,5 +1,6 @@
 // Lo primero que se ve: elegir quién usa el sistema y poner el PIN. La primera
 // vez (sin usuarios) se crea el usuario de administración.
+import { LineasDobles } from '@/components/layout/lineas-dobles';
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { esquemaPin } from '@compartido/esquemas';
@@ -21,18 +22,8 @@ export function PantallaIngreso() {
 
   return (
     <div className="grid h-full grid-cols-[minmax(340px,38%)_1fr]">
-      <aside className="relative flex flex-col justify-between overflow-hidden bg-lateral p-10 text-white">
-        {/* Una cancha entera, dibujada con líneas, de fondo */}
-        <svg aria-hidden="true" viewBox="0 0 240 360" className="pointer-events-none absolute -right-20 -bottom-12 h-[640px] rotate-[8deg] text-white/[0.08]" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <rect x="10" y="10" width="220" height="340" rx="10" />
-          <path d="M10 180h220" />
-          <circle cx="120" cy="180" r="40" />
-          <circle cx="120" cy="180" r="3" fill="currentColor" />
-          <rect x="55" y="10" width="130" height="56" />
-          <rect x="55" y="294" width="130" height="56" />
-          <rect x="88" y="10" width="64" height="22" />
-          <rect x="88" y="328" width="64" height="22" />
-        </svg>
+      <aside className="relative flex flex-col justify-between overflow-hidden fondo-lateral p-10 text-white">
+        <LineasDobles className="-right-16 -bottom-6 h-[760px]" />
         <div className="relative flex items-center gap-3">
           <Marca className="size-12" />
           <p className="text-[15px] text-white/70">Reservas de canchas</p>

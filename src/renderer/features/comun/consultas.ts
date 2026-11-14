@@ -11,6 +11,8 @@ export const CLAVES = {
   canchas: ['canchas'],
   clientes: ['clientes'],
   reservas: ['reservas'],
+  abonos: ['abonos'],
+  bloqueos: ['bloqueos'],
   complejo: ['complejo'],
   resumen: ['resumen'],
 } as const;
@@ -32,6 +34,18 @@ export function useReservas(rango: DatosRango) {
     queryKey: [...CLAVES.reservas, rango],
     queryFn: () => desenvolver(canchas().reservas.rango(rango)),
     placeholderData: keepPreviousData, // al cambiar de semana no parpadea la grilla
+  });
+}
+
+export const useAbonos = () => useQuery({ queryKey: CLAVES.abonos, queryFn: () => desenvolver(canchas().abonos.listar()) });
+/** Los bloqueos que vienen (no los que ya pasaron). */
+export const useBloqueosVigentes = () => useQuery({ queryKey: [...CLAVES.bloqueos, 'vigentes'], queryFn: () => desenvolver(canchas().bloqueos.listar()) });
+
+export function useBloqueos(rango: DatosRango) {
+  return useQuery({
+    queryKey: [...CLAVES.bloqueos, rango],
+    queryFn: () => desenvolver(canchas().bloqueos.rango(rango)),
+    placeholderData: keepPreviousData,
   });
 }
 

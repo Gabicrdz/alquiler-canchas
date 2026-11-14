@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 import { is } from 'drizzle-orm';
+import { MIGRACIONES } from '../src/main/db/migraciones';
 import { getTableConfig, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import * as esquema from '../src/main/db/esquema';
 import { VERSION_BASE, abrirBaseDeDatos, cerrarBaseDeDatos } from '../src/main/db/conexion';
@@ -12,7 +14,7 @@ describe('base de datos', () => {
   it('esquema.ts (Drizzle) coincide con las tablas que crean las migraciones', () => {
     const db = baseNueva();
     const tablas = (Object.values(esquema) as unknown[]).filter((t): t is SQLiteTable => is(t, SQLiteTable));
-    expect(tablas.length).toBe(7);
+    expect(tablas.length).toBe(9);
     for (const tabla of tablas) {
       const config = getTableConfig(tabla);
       const enLaBase = (
@@ -20,6 +22,28 @@ describe('base de datos', () => {
       ).map((c) => `${c.name}${c.notnull || c.pk ? '!' : ''}`);
       const enDrizzle = config.columns.map((c) => `${c.name}${c.notNull ? '!' : ''}`);
       expect(enDrizzle.sort(), config.name).toEqual(enLaBase.sort());
+    }
+  });
+
+  it('una base de la etapa 1, con reservas, se actualiza sin perder nada', () => {
+    const carpeta = mkdtempSync(path.join(tmpdir(), 'canchas-'));
+    const ruta = path.join(carpeta, 'canchas.db');
+    try {
+      cerrarBaseDeDatos();
+      // Se arma una base como la entregada en la etapa 1: solo la migración 1
+      const vieja = new Database(ruta);
+      vieja.exec(MIGRACIONES[0]!.sql);
+      vieja.exec(`INSERT INTO canchas (nombre, deporte, duracion_min, apertura, cierre, precio_base_centavos) VALUES ('Cancha 1', 'futbol', 60, '15:00', '24:00', 2000000);
+                  INSERT INTO clientes (nombre) VALUES ('Los Pibes');
+                  INSERT INTO reservas (cancha_id, cliente_id, fecha, desde, hasta, precio_centavos) VALUES (1, 1, '2026-11-12', '20:00', '21:00', 2000000);`);
+      vieja.pragma('user_version = 1');
+      vieja.close();
+      const db = abrirBaseDeDatos(ruta);
+      expect(db.$client.pragma('user_version', { simple: true })).toBe(VERSION_BASE);
+      expect(db.$client.prepare('SELECT fecha, abono_id AS abonoId FROM reservas').all()).toEqual([{ fecha: '2026-11-12', abonoId: null }]);
+    } finally {
+      cerrarBaseDeDatos();
+      rmSync(carpeta, { recursive: true, force: true });
     }
   });
 

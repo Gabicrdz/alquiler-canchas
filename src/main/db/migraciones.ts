@@ -139,4 +139,49 @@ export const MIGRACIONES: Migracion[] = [
       CREATE INDEX pagos_por_reserva ON pagos (reserva_id);
     `,
   },
+  {
+    nombre: 'Abonos (turnos fijos semanales) y bloqueos (lluvia, mantenimiento)',
+    sql: /* sql */ `
+      -- Un abono es un turno fijo: la misma cancha, el mismo día y hora, todas las semanas.
+      -- El programa lo convierte en reservas comunes de las próximas semanas (así la
+      -- grilla, los pagos y los reportes funcionan igual); esta tabla guarda la regla.
+      CREATE TABLE abonos (
+        id              INTEGER PRIMARY KEY,
+        cancha_id       INTEGER NOT NULL REFERENCES canchas (id),
+        cliente_id      INTEGER NOT NULL REFERENCES clientes (id),
+        dia_semana      INTEGER NOT NULL CHECK (dia_semana BETWEEN 1 AND 7),   -- 1 = lunes … 7 = domingo
+        desde           TEXT    NOT NULL,
+        hasta           TEXT    NOT NULL,
+        desde_fecha     TEXT    NOT NULL,
+        hasta_fecha     TEXT,                                                   -- NULL = sigue hasta que se lo termine
+        precio_centavos INTEGER NOT NULL CHECK (precio_centavos >= 0),
+        nota            TEXT    NOT NULL DEFAULT '',
+        activo          INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1)),
+        creado_en       TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+        CHECK (desde < hasta)
+      );
+      CREATE INDEX abonos_por_cancha ON abonos (cancha_id, dia_semana);
+
+      -- De qué abono viene cada reserva (NULL = reserva suelta).
+      ALTER TABLE reservas ADD COLUMN abono_id INTEGER REFERENCES abonos (id);
+      CREATE INDEX reservas_por_abono ON reservas (abono_id, fecha);
+
+      -- Cierres de una cancha (o de todas) por un rato o por varios días.
+      CREATE TABLE bloqueos (
+        id          INTEGER PRIMARY KEY,
+        cancha_id   INTEGER REFERENCES canchas (id),                            -- NULL = todas las canchas
+        fecha_desde TEXT    NOT NULL,
+        fecha_hasta TEXT    NOT NULL,
+        desde       TEXT,                                                       -- NULL (con hasta) = todo el día
+        hasta       TEXT,
+        motivo      TEXT    NOT NULL CHECK (motivo IN ('lluvia', 'mantenimiento', 'torneo', 'otro')),
+        nota        TEXT    NOT NULL DEFAULT '',
+        activo      INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1)),
+        creado_en   TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+        CHECK (fecha_desde <= fecha_hasta),
+        CHECK ((desde IS NULL) = (hasta IS NULL))
+      );
+      CREATE INDEX bloqueos_por_fecha ON bloqueos (fecha_hasta, fecha_desde);
+    `,
+  },
 ];

@@ -31,3 +31,20 @@ export const NOMBRE_DIA: Record<number, string> = {
   6: 'sábado',
   7: 'domingo',
 };
+
+/** Suma (o resta) días a una fecha 'AAAA-MM-DD'. */
+export function sumarDias(fecha: string, dias: number): string {
+  const [a, m, d] = fecha.split('-').map(Number) as [number, number, number];
+  const f = new Date(a, m - 1, d + dias, 12);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+}
+
+/** Todas las fechas de un día de la semana (1 = lunes … 7 = domingo) entre dos fechas, inclusive. */
+export function fechasDeUnDia(dia: number, desde: string, hasta: string): string[] {
+  const fechas: string[] = [];
+  let f = desde;
+  // avanzar hasta el primer día pedido
+  while (f <= hasta && diaDeLaSemana(f) !== dia) f = sumarDias(f, 1);
+  for (; f <= hasta; f = sumarDias(f, 7)) fechas.push(f);
+  return fechas;
+}

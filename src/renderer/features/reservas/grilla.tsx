@@ -1,11 +1,11 @@
 // La grilla del día: una columna por cancha y las horas hacia abajo. Cada turno
 // se dibuja según su hora real (alto = duración), así las canchas de fútbol
 // (60 min) y las de pádel (90 min) conviven en la misma pantalla.
-import { Check, Plus, Umbrella } from 'lucide-react';
+import { Ban, Check, CloudRain, Plus, Repeat, Trophy, Umbrella, Wrench, type LucideIcon } from 'lucide-react';
 import { aMinutos } from '@compartido/horarios';
-import { horariosDeCancha, precioDelTurno, sumarMinutos } from '@compartido/canchas';
+import { bloqueoCubre, horariosDeCancha, NOMBRE_MOTIVO, precioDelTurno, sumarMinutos, type MotivoBloqueo } from '@compartido/canchas';
 import { pesos } from '@compartido/dinero';
-import type { Cancha, Reserva } from '@compartido/tipos';
+import type { Bloqueo, Cancha, Reserva } from '@compartido/tipos';
 import { CanchaDibujo, PelotaDibujo } from '@/components/layout/cancha-dibujo';
 import { cn } from '@/lib/utils';
 import { COLOR, PX_HORA, PX_MINUTO } from './estilos';
@@ -17,6 +17,8 @@ interface Props {
   canchas: Cancha[];
   /** Las reservas del DÍA (sin las canceladas). */
   reservas: Reserva[];
+  /** Los bloqueos que tocan el día. */
+  bloqueos: Bloqueo[];
   alReservar: (cancha: Cancha, desde: string) => void;
   alAbrir: (reserva: Reserva) => void;
 }
@@ -24,7 +26,7 @@ interface Props {
 const dosCifras = (n: number) => String(n).padStart(2, '0');
 const hora = (minutos: number) => `${dosCifras(Math.floor(minutos / 60))}:${dosCifras(minutos % 60)}`;
 
-export function Grilla({ fecha, hoy, ahora, canchas, reservas, alReservar, alAbrir }: Props) {
+export function Grilla({ fecha, hoy, ahora, canchas, reservas, bloqueos, alReservar, alAbrir }: Props) {
   const inicio = Math.floor(Math.min(...canchas.map((c) => aMinutos(c.apertura))) / 60) * 60;
   const fin = Math.ceil(Math.max(...canchas.map((c) => aMinutos(c.cierre))) / 60) * 60;
   const alto = (fin - inicio) * PX_MINUTO;
@@ -72,6 +74,8 @@ export function Grilla({ fecha, hoy, ahora, canchas, reservas, alReservar, alAbr
               const hasta = sumarMinutos(desde, c.duracionMin);
               const posicion = { top: (aMinutos(desde) - inicio) * PX_MINUTO + 3, height: c.duracionMin * PX_MINUTO - 6 };
               if (reserva) return <Turno key={desde} reserva={reserva} cancha={c} posicion={posicion} alAbrir={() => alAbrir(reserva)} />;
+              const cierre = bloqueos.find((b) => bloqueoCubre(b, c.id, fecha, desde, hasta));
+              if (cierre) return <Cerrado key={desde} bloqueo={cierre} desde={desde} hasta={hasta} posicion={posicion} />;
               const termino = fecha < hoy || (esHoy && aMinutos(hasta) <= minutoAhora);
               const enJuego = esHoy && aMinutos(desde) <= minutoAhora && minutoAhora < aMinutos(hasta);
               return <Libre key={desde} cancha={c} fecha={fecha} desde={desde} hasta={hasta} posicion={posicion} termino={termino} enJuego={enJuego} alReservar={() => alReservar(c, desde)} />;
@@ -175,6 +179,32 @@ function Libre({
   );
 }
 
+const ICONO_MOTIVO: Record<MotivoBloqueo, LucideIcon> = { lluvia: CloudRain, mantenimiento: Wrench, torneo: Trophy, otro: Ban };
+
+/** Un turno que no se puede reservar porque la cancha está cerrada (lluvia, mantenimiento…). */
+function Cerrado({ bloqueo, desde, hasta, posicion }: { bloqueo: Bloqueo; desde: string; hasta: string; posicion: { top: number; height: number } }) {
+  const Icono = ICONO_MOTIVO[bloqueo.motivo];
+  return (
+    <div
+      role="img"
+      aria-label={`${desde} a ${hasta}, cerrada: ${NOMBRE_MOTIVO[bloqueo.motivo]}${bloqueo.nota ? ` (${bloqueo.nota})` : ''}`}
+      className="cerrado absolute inset-x-1.5 flex flex-col justify-between rounded-xl border border-lateral/20 px-2.5 py-1.5 text-tinta-suave"
+      style={posicion}
+    >
+      <span className="text-[12px]">
+        {desde} – {hasta}
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <Icono className="size-4 shrink-0" aria-hidden="true" />
+          <span className="truncate">{NOMBRE_MOTIVO[bloqueo.motivo]}</span>
+        </span>
+        {bloqueo.nota && <span className="block truncate pl-[22px] text-[12px]">{bloqueo.nota}</span>}
+      </span>
+    </div>
+  );
+}
+
 /** El cartel de pago de una reserva: lo primero que mira el encargado. */
 export function EtiquetaDePago({ reserva, className }: { reserva: Pick<Reserva, 'estadoDePago' | 'precioCentavos' | 'pagadoCentavos'>; className?: string }) {
   const debe = reserva.precioCentavos - reserva.pagadoCentavos;
@@ -212,8 +242,9 @@ function Turno({ reserva, cancha, posicion, alAbrir }: { reserva: Reserva; canch
       <span className="flex items-start justify-between gap-1.5">
         <span className="min-w-0">
           <span className="block truncate font-display text-[16px] leading-tight font-bold">{reserva.cliente}</span>
-          <span className={cn('text-[12px]', !jugada && !ausente ? 'text-white/80' : 'text-tinta-suave')}>
+          <span className={cn('flex items-center gap-1 text-[12px]', !jugada && !ausente ? 'text-white/80' : 'text-tinta-suave')}>
             {reserva.desde} – {reserva.hasta}
+            {reserva.abonoId !== null && <Repeat className="size-3" aria-label="Abono (turno fijo)" />}
           </span>
         </span>
         <PelotaDibujo deporte={cancha.deporte} className={cn('mt-0.5 size-[18px] shrink-0', !jugada && !ausente ? 'text-fut-fuerte' : 'text-tinta-suave opacity-70')} />

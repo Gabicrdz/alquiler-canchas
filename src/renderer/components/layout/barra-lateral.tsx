@@ -1,8 +1,8 @@
-// Barra lateral verde pino con las líneas de una cancha de fondo: nombre del
+// Barra lateral que mezcla el verde del fútbol y el azul del pádel, con las líneas de las dos canchas de fondo: nombre del
 // complejo arriba, secciones al medio (según el rol), y abajo Ajustes y quién
 // está usando el sistema.
 import { NavLink } from 'react-router';
-import { CalendarDays, Goal, Lock, Settings, UsersRound, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Goal, Repeat, Lock, Settings, UsersRound, type LucideIcon } from 'lucide-react';
 import { NOMBRE_ROL } from '@compartido/tipos';
 import { Button } from '@/components/ui/button';
 import { Iniciales } from '@/features/sesion/iniciales';
@@ -11,9 +11,11 @@ import { useComplejo } from '@/features/comun/consultas';
 import { cn } from '@/lib/utils';
 import { fechaLarga } from '@/lib/fechas';
 import { Marca } from './marca';
+import { LineasDobles } from './lineas-dobles';
 
 const SECCIONES: { ruta: string; nombre: string; icono: LucideIcon; soloAdmin?: boolean }[] = [
   { ruta: '/', nombre: 'Reservas', icono: CalendarDays },
+  { ruta: '/abonos', nombre: 'Abonos', icono: Repeat },
   { ruta: '/clientes', nombre: 'Clientes', icono: UsersRound },
   { ruta: '/canchas', nombre: 'Canchas', icono: Goal, soloAdmin: true },
 ];
@@ -36,26 +38,13 @@ function Enlace({ ruta, nombre, icono: Icono }: Omit<(typeof SECCIONES)[number],
   );
 }
 
-/** Las líneas de una cancha, enormes y casi invisibles, de fondo. */
-function LineasDeFondo() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 240 360" className="pointer-events-none absolute -right-16 bottom-10 h-[420px] text-white/[0.06]" fill="none" stroke="currentColor" strokeWidth="3">
-      <rect x="10" y="10" width="220" height="340" rx="10" />
-      <path d="M10 180h220" />
-      <circle cx="120" cy="180" r="40" />
-      <rect x="55" y="10" width="130" height="56" />
-      <rect x="55" y="294" width="130" height="56" />
-    </svg>
-  );
-}
-
 export function BarraLateral() {
   const complejo = useComplejo();
   const { usuario, esAdmin } = useUsuario();
   const bloquear = useBloquear();
   return (
-    <aside className="relative flex h-full w-[236px] shrink-0 flex-col overflow-hidden bg-lateral px-4 py-5 text-white">
-      <LineasDeFondo />
+    <aside className="relative flex h-full w-[236px] shrink-0 flex-col overflow-hidden fondo-lateral px-4 py-5 text-white">
+      <LineasDobles className="-right-24 bottom-0 h-[520px]" />
       <div className="relative flex items-center gap-3 px-1">
         <Marca />
         <div className="min-w-0">
@@ -78,7 +67,7 @@ export function BarraLateral() {
               <p className="truncate text-[14px] leading-tight font-semibold">{usuario.nombre}</p>
               <p className="text-[12px] text-white/60">{NOMBRE_ROL[usuario.rol]}</p>
             </div>
-            <Button variant="ghost" size="icon-sm" className="text-white/80 hover:bg-white/10 hover:text-white" aria-label="Bloquear (salir)" title="Bloquear (salir)" disabled={bloquear.isPending} onClick={() => bloquear.mutate()}>
+            <Button variant="ghost" size="icon-sm" className="text-white/80 hover:bg-white/10 hover:text-white" aria-label="Salir" title="Salir (se vuelve a pedir el PIN)" disabled={bloquear.isPending} onClick={() => bloquear.mutate()}>
               <Lock aria-hidden="true" />
             </Button>
           </div>
