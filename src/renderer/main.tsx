@@ -11,6 +11,8 @@ import { PaginaReservas } from '@/features/reservas/pagina-reservas';
 import { PaginaAbonos } from '@/features/abonos/pagina-abonos';
 import { PaginaClientes } from '@/features/clientes/pagina-clientes';
 import { PaginaCanchas } from '@/features/canchas/pagina-canchas';
+import { PaginaTorneos } from '@/features/torneos/pagina-torneos';
+import { PaginaTorneo } from '@/features/torneos/pagina-torneo';
 import { PaginaReportes } from '@/features/reportes/pagina-reportes';
 import { PaginaAjustes } from '@/features/ajustes/pagina-ajustes';
 import { PantallaIngreso } from '@/features/sesion/pantalla-ingreso';
@@ -25,6 +27,8 @@ const router = createHashRouter([
     children: [
       { index: true, element: <PaginaReservas /> },
       { path: 'abonos', element: <PaginaAbonos /> },
+      { path: 'torneos', element: <PaginaTorneos /> },
+      { path: 'torneos/:id', element: <PaginaTorneo /> },
       { path: 'clientes', element: <PaginaClientes /> },
       { path: 'canchas', element: <SoloAdmin><PaginaCanchas /></SoloAdmin> },
       { path: 'reportes', element: <SoloAdmin><PaginaReportes /></SoloAdmin> },

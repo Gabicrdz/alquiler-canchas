@@ -53,6 +53,20 @@ const api: ApiCanchas = {
   whatsapp: {
     avisar: (datos) => pedir(CANALES.whatsappAvisar, datos),
   },
+  torneos: {
+    listar: () => pedir(CANALES.torneosListar),
+    obtener: (id) => pedir(CANALES.torneosObtener, id),
+    crear: (datos) => pedir(CANALES.torneosCrear, datos),
+    cancelar: (id) => pedir(CANALES.torneosCancelar, id),
+    agregarEquipo: (datos) => pedir(CANALES.torneosAgregarEquipo, datos),
+    quitarEquipo: (id) => pedir(CANALES.torneosQuitarEquipo, id),
+    cobrarEquipo: (datos) => pedir(CANALES.torneosCobrarEquipo, datos),
+    anularPagoEquipo: (id) => pedir(CANALES.torneosAnularPago, id),
+    generarFixture: (datos) => pedir(CANALES.torneosFixture, datos),
+    programarPartido: (datos) => pedir(CANALES.torneosProgramar, datos),
+    cargarResultado: (datos) => pedir(CANALES.torneosResultado, datos),
+    terminar: (id) => pedir(CANALES.torneosTerminar, id),
+  },
   pagos: {
     registrar: (datos) => pedir(CANALES.pagosRegistrar, datos),
     anular: (id) => pedir(CANALES.pagosAnular, id),

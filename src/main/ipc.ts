@@ -15,6 +15,12 @@ import {
   esquemaComplejo,
   esquemaAbono,
   esquemaAviso,
+  esquemaEquipo,
+  esquemaFixture,
+  esquemaPagoEquipo,
+  esquemaProgramar,
+  esquemaResultado,
+  esquemaTorneo,
   esquemaRangoReporte,
   esquemaBloqueo,
   esquemaEstado,
@@ -36,6 +42,20 @@ import { cancelarReserva, cambiarEstado, crearReserva, moverReserva, reservasDel
 import { fechaLocal } from './servicios/fechas';
 import { crearAbono, extenderAbonos, listarAbonos, terminarAbono } from './servicios/abonos';
 import { bloqueosDelRango, contarAfectadas, crearBloqueo, listarBloqueos, quitarBloqueo } from './servicios/bloqueos';
+import {
+  agregarEquipo,
+  anularPagoEquipo,
+  cancelarTorneo,
+  cargarResultado,
+  cobrarEquipo,
+  crearTorneo,
+  generarFixture,
+  listarTorneos,
+  obtenerTorneo,
+  programarPartido,
+  quitarEquipo,
+  terminarTorneo,
+} from './servicios/torneos';
 import { obtenerReporte } from './servicios/reportes';
 import { prepararAviso } from './servicios/whatsapp';
 import { anularPago, registrarPago } from './servicios/pagos';
@@ -171,6 +191,38 @@ export function registrarCanales(info: () => InfoSistema): void {
     const { url, telefono, cliente } = prepararAviso(db(), datos);
     await shell.openExternal(url); // solo https://wa.me/…: la ventana nunca elige la dirección
     return { telefono, cliente };
+  });
+
+  // ── Torneos ──
+  manejar(CANALES.torneosListar, 'sesion', nada, () => listarTorneos(db()));
+  manejar(CANALES.torneosObtener, 'sesion', z.tuple([id]), (tid) => obtenerTorneo(db(), tid));
+  manejar(CANALES.torneosCrear, 'sesion', z.tuple([esquemaTorneo]), (datos) => crearTorneo(db(), datos));
+  manejar(CANALES.torneosCancelar, 'admin', z.tuple([id]), (tid) => {
+    cancelarTorneo(db(), tid);
+    return null;
+  });
+  manejar(CANALES.torneosAgregarEquipo, 'sesion', z.tuple([esquemaEquipo]), (datos) => agregarEquipo(db(), datos));
+  manejar(CANALES.torneosQuitarEquipo, 'sesion', z.tuple([id]), (eid) => {
+    quitarEquipo(db(), eid);
+    return null;
+  });
+  manejar(CANALES.torneosCobrarEquipo, 'sesion', z.tuple([esquemaPagoEquipo]), (datos, yo) => cobrarEquipo(db(), datos, yo.id));
+  manejar(CANALES.torneosAnularPago, 'sesion', z.tuple([id]), (pid, yo) => {
+    anularPagoEquipo(db(), pid, yo);
+    return null;
+  });
+  manejar(CANALES.torneosFixture, 'sesion', z.tuple([esquemaFixture]), (datos) => generarFixture(db(), datos));
+  manejar(CANALES.torneosProgramar, 'sesion', z.tuple([esquemaProgramar]), (datos) => {
+    programarPartido(db(), datos);
+    return null;
+  });
+  manejar(CANALES.torneosResultado, 'sesion', z.tuple([esquemaResultado]), (datos) => {
+    cargarResultado(db(), datos);
+    return null;
+  });
+  manejar(CANALES.torneosTerminar, 'sesion', z.tuple([id]), (tid) => {
+    terminarTorneo(db(), tid);
+    return null;
   });
 
   manejar(CANALES.pagosRegistrar, 'sesion', z.tuple([esquemaPago]), (datos, yo) => registrarPago(db(), datos, yo.id));

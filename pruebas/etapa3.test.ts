@@ -6,6 +6,7 @@ import { registrarPago } from '../src/main/servicios/pagos';
 import { cambiarEstado, cancelarReserva } from '../src/main/servicios/reservas';
 import { obtenerReporte } from '../src/main/servicios/reportes';
 import { cargarEjemplo } from '../src/main/servicios/ejemplo';
+import { listarTorneos, obtenerTorneo } from '../src/main/servicios/torneos';
 import { prepararAviso } from '../src/main/servicios/whatsapp';
 import { AHORA, HOY, baseNueva, cancha, cliente, reservar, usuario } from './ayudantes';
 
@@ -178,5 +179,15 @@ describe('reporte', () => {
     expect(r.porDia.filter((d) => d.cobradoCentavos > 0).length).toBeGreaterThan(10);
     expect(r.deudores.length).toBeGreaterThan(0);
     expect(r.resumen.porCobrarCentavos).toBeGreaterThan(0);
+  });
+
+  it('los datos de ejemplo traen un torneo en marcha', () => {
+    const db = baseNueva();
+    usuario(db);
+    cargarEjemplo(db, AHORA);
+    const t = listarTorneos(db)[0]!;
+    expect(t).toMatchObject({ nombre: 'Copa Verano', estado: 'en_juego', equipos: 6, partidos: 15 });
+    expect(t.partidosJugados).toBeGreaterThan(0);
+    expect(obtenerTorneo(db, t.id).posiciones).toHaveLength(6);
   });
 });

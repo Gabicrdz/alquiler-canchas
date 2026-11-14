@@ -9,6 +9,12 @@ import type {
   DatosCancelacion,
   DatosCancha,
   DatosCliente,
+  DatosEquipo,
+  DatosFixture,
+  DatosPagoEquipo,
+  DatosProgramar,
+  DatosResultado,
+  DatosTorneo,
   DatosComplejo,
   DatosMover,
   DatosPago,
@@ -18,7 +24,7 @@ import type {
   DatosUsuario,
 } from './esquemas';
 import type { EstadoReserva } from './canchas';
-import type { Abono, Bloqueo, Cancha, Cliente, Complejo, CopiaElegida, EstadoCopias, InfoCopia, InfoSistema, Reporte, Reserva, Respuesta, ResultadoAbono, ResultadoAviso, ResultadoBloqueo, ResultadoEjemplo, Resumen, Usuario } from './tipos';
+import type { Abono, Bloqueo, Cancha, Cliente, Complejo, CopiaElegida, DetalleTorneo, Torneo, EstadoCopias, InfoCopia, InfoSistema, Reporte, Reserva, Respuesta, ResultadoAbono, ResultadoAviso, ResultadoBloqueo, ResultadoEjemplo, Resumen, Usuario } from './tipos';
 
 export interface ApiCanchas {
   sesion: {
@@ -79,6 +85,22 @@ export interface ApiCanchas {
     /** Abre WhatsApp con el mensaje escrito para el cliente de esa reserva. */
     avisar(datos: DatosAviso): Promise<Respuesta<ResultadoAviso>>;
   };
+  torneos: {
+    listar(): Promise<Respuesta<Torneo[]>>;
+    obtener(id: number): Promise<Respuesta<DetalleTorneo>>;
+    crear(datos: DatosTorneo): Promise<Respuesta<number>>;
+    /** Lo da de baja y levanta el bloqueo de canchas que hubiera creado (solo administración). */
+    cancelar(id: number): Promise<Respuesta<null>>;
+    agregarEquipo(datos: DatosEquipo): Promise<Respuesta<number>>;
+    quitarEquipo(equipoId: number): Promise<Respuesta<null>>;
+    cobrarEquipo(datos: DatosPagoEquipo): Promise<Respuesta<number>>;
+    anularPagoEquipo(pagoId: number): Promise<Respuesta<null>>;
+    /** Arma el fixture (todos contra todos) y pasa el torneo a "en juego". */
+    generarFixture(datos: DatosFixture): Promise<Respuesta<number>>;
+    programarPartido(datos: DatosProgramar): Promise<Respuesta<null>>;
+    cargarResultado(datos: DatosResultado): Promise<Respuesta<null>>;
+    terminar(id: number): Promise<Respuesta<null>>;
+  };
   pagos: {
     registrar(datos: DatosPago): Promise<Respuesta<number>>;
     anular(id: number): Promise<Respuesta<null>>;
@@ -134,6 +156,18 @@ export const CANALES = {
   bloqueosQuitar: 'bloqueos:quitar',
   reportesObtener: 'reportes:obtener',
   whatsappAvisar: 'whatsapp:avisar',
+  torneosListar: 'torneos:listar',
+  torneosObtener: 'torneos:obtener',
+  torneosCrear: 'torneos:crear',
+  torneosCancelar: 'torneos:cancelar',
+  torneosAgregarEquipo: 'torneos:agregar-equipo',
+  torneosQuitarEquipo: 'torneos:quitar-equipo',
+  torneosCobrarEquipo: 'torneos:cobrar-equipo',
+  torneosAnularPago: 'torneos:anular-pago',
+  torneosFixture: 'torneos:fixture',
+  torneosProgramar: 'torneos:programar',
+  torneosResultado: 'torneos:resultado',
+  torneosTerminar: 'torneos:terminar',
   pagosRegistrar: 'pagos:registrar',
   pagosAnular: 'pagos:anular',
   complejoObtener: 'complejo:obtener',

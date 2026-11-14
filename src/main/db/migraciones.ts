@@ -184,4 +184,66 @@ export const MIGRACIONES: Migracion[] = [
       CREATE INDEX bloqueos_por_fecha ON bloqueos (fecha_hasta, fecha_desde);
     `,
   },
+  {
+    nombre: 'Torneos: equipos, inscripción con pagos, fixture y resultados',
+    sql: /* sql */ `
+      -- Un torneo dura unos días, tiene una cuota de inscripción por equipo y (si se quiere)
+      -- un bloqueo asociado que cierra las canchas mientras se juega.
+      CREATE TABLE torneos (
+        id            INTEGER PRIMARY KEY,
+        nombre        TEXT    NOT NULL,
+        deporte       TEXT    NOT NULL CHECK (deporte IN ('futbol', 'padel')),
+        fecha_desde   TEXT    NOT NULL,
+        fecha_hasta   TEXT    NOT NULL,
+        cuota_centavos INTEGER NOT NULL DEFAULT 0 CHECK (cuota_centavos >= 0),
+        estado        TEXT    NOT NULL DEFAULT 'inscripcion' CHECK (estado IN ('inscripcion', 'en_juego', 'terminado')),
+        nota          TEXT    NOT NULL DEFAULT '',
+        bloqueo_id    INTEGER REFERENCES bloqueos (id),
+        activo        INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1)),
+        creado_en     TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+        CHECK (fecha_desde <= fecha_hasta)
+      );
+
+      CREATE TABLE torneo_equipos (
+        id         INTEGER PRIMARY KEY,
+        torneo_id  INTEGER NOT NULL REFERENCES torneos (id),
+        nombre     TEXT    NOT NULL,
+        telefono   TEXT    NOT NULL DEFAULT '',
+        activo     INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1)),
+        creado_en  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+      CREATE UNIQUE INDEX torneo_equipos_nombre ON torneo_equipos (torneo_id, nombre COLLATE NOCASE) WHERE activo = 1;
+
+      -- Los pagos de inscripción se anulan, no se borran (igual que los de las reservas).
+      CREATE TABLE torneo_pagos (
+        id             INTEGER PRIMARY KEY,
+        equipo_id      INTEGER NOT NULL REFERENCES torneo_equipos (id),
+        monto_centavos INTEGER NOT NULL CHECK (monto_centavos > 0),
+        metodo         TEXT    NOT NULL CHECK (metodo IN ('efectivo', 'transferencia', 'mercadopago', 'tarjeta')),
+        anulado        INTEGER NOT NULL DEFAULT 0 CHECK (anulado IN (0, 1)),
+        anulado_en     TEXT,
+        usuario_id     INTEGER REFERENCES usuarios (id),
+        creado_en      TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+      CREATE INDEX torneo_pagos_por_equipo ON torneo_pagos (equipo_id);
+
+      -- Cada partido del fixture. Los goles son NULL hasta que se juega.
+      CREATE TABLE torneo_partidos (
+        id               INTEGER PRIMARY KEY,
+        torneo_id        INTEGER NOT NULL REFERENCES torneos (id),
+        ronda            INTEGER NOT NULL CHECK (ronda >= 1),
+        local_id         INTEGER NOT NULL REFERENCES torneo_equipos (id),
+        visitante_id     INTEGER NOT NULL REFERENCES torneo_equipos (id),
+        fecha            TEXT,
+        hora             TEXT,
+        cancha_id        INTEGER REFERENCES canchas (id),
+        goles_local      INTEGER CHECK (goles_local IS NULL OR goles_local >= 0),
+        goles_visitante  INTEGER CHECK (goles_visitante IS NULL OR goles_visitante >= 0),
+        CHECK (local_id <> visitante_id),
+        CHECK ((goles_local IS NULL) = (goles_visitante IS NULL)),
+        CHECK ((fecha IS NULL) = (hora IS NULL))
+      );
+      CREATE INDEX torneo_partidos_por_torneo ON torneo_partidos (torneo_id, ronda);
+    `,
+  },
 ];

@@ -2,7 +2,7 @@
 // marcar si jugó o no vino, y cancelar (decidiendo qué pasa con la seña).
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Ban, CalendarClock, MoveRight, Phone, Repeat, Undo2 } from 'lucide-react';
+import { Ban, CalendarClock, MoveRight, Phone, Printer, Repeat, Undo2 } from 'lucide-react';
 import { METODOS, NOMBRE_METODO } from '@compartido/esquemas';
 import { estadosPosibles, NOMBRE_ESTADO, sePuedeCancelar, type EstadoReserva } from '@compartido/canchas';
 import { pesos } from '@compartido/dinero';
@@ -14,11 +14,13 @@ import { CanchaDibujo } from '@/components/layout/cancha-dibujo';
 import { desenvolver, canchas } from '@/lib/api';
 import { fechaLarga } from '@/lib/fechas';
 import { cn } from '@/lib/utils';
-import { CLAVES, useAccion, useCanchas } from '@/features/comun/consultas';
+import { Imprimible } from '@/components/layout/imprimible';
+import { CLAVES, useAccion, useCanchas, useComplejo } from '@/features/comun/consultas';
 import { useUsuario } from '@/features/sesion/consultas';
 import { COLOR } from './estilos';
 import { BotonAviso } from '@/features/reportes/boton-aviso';
 import { DialogoMover } from './dialogo-mover';
+import { TicketReserva } from './ticket-reserva';
 
 export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Reserva | null; cancha: Cancha | undefined; hoy: string; alCerrar: () => void }) {
   const { esAdmin } = useUsuario();
@@ -26,6 +28,8 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
   const [metodo, setMetodo] = useState<(typeof METODOS)[number]>('efectivo');
   const [cancelando, setCancelando] = useState(false);
   const [moviendo, setMoviendo] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const complejo = useComplejo();
   const todasLasCanchas = useCanchas();
   const [error, setError] = useState('');
 
@@ -212,6 +216,11 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
                     <Undo2 aria-hidden="true" /> Volver a pendiente
                   </Button>
                 )}
+                {reserva.estado !== 'cancelada' && (
+                  <Button variant="outline" onClick={() => setImprimiendo(true)}>
+                    <Printer aria-hidden="true" /> Imprimir comprobante
+                  </Button>
+                )}
                 {reserva.estado === 'reservada' && <BotonAviso reservaId={reserva.id} tipo="recordatorio">Recordar por WhatsApp</BotonAviso>}
                 {saldo > 0 && reserva.estado !== 'cancelada' && <BotonAviso reservaId={reserva.id} tipo="cobro">Reclamar saldo</BotonAviso>}
                 {reserva.estado === 'reservada' && reserva.fecha > hoy && (
@@ -240,6 +249,11 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
         )}
       </DialogContent>
     </Dialog>
+      {imprimiendo && reserva && (
+        <Imprimible alTerminar={() => setImprimiendo(false)}>
+          <TicketReserva reserva={reserva} cancha={cancha} complejo={complejo.data} />
+        </Imprimible>
+      )}
       <DialogoMover reserva={moviendo ? reserva : null} canchas={(todasLasCanchas.data ?? []).filter((x) => x.activo)} hoy={hoy} alCerrar={() => setMoviendo(false)} alMover={alCerrar} />
     </>
   );

@@ -122,3 +122,60 @@ export const bloqueos = sqliteTable('bloqueos', {
   activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
   creadoEn: text('creado_en').notNull().default(ahora),
 });
+
+export const torneos = sqliteTable('torneos', {
+  id: integer('id').primaryKey(),
+  nombre: text('nombre').notNull(),
+  deporte: text('deporte', { enum: ['futbol', 'padel'] }).notNull(),
+  fechaDesde: text('fecha_desde').notNull(),
+  fechaHasta: text('fecha_hasta').notNull(),
+  cuotaCentavos: integer('cuota_centavos').notNull().default(0),
+  estado: text('estado', { enum: ['inscripcion', 'en_juego', 'terminado'] }).notNull().default('inscripcion'),
+  nota: text('nota').notNull().default(''),
+  bloqueoId: integer('bloqueo_id').references(() => bloqueos.id),
+  activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
+  creadoEn: text('creado_en').notNull().default(ahora),
+});
+
+export const torneoEquipos = sqliteTable('torneo_equipos', {
+  id: integer('id').primaryKey(),
+  torneoId: integer('torneo_id')
+    .notNull()
+    .references(() => torneos.id),
+  nombre: text('nombre').notNull(),
+  telefono: text('telefono').notNull().default(''),
+  activo: integer('activo', { mode: 'boolean' }).notNull().default(true),
+  creadoEn: text('creado_en').notNull().default(ahora),
+});
+
+export const torneoPagos = sqliteTable('torneo_pagos', {
+  id: integer('id').primaryKey(),
+  equipoId: integer('equipo_id')
+    .notNull()
+    .references(() => torneoEquipos.id),
+  montoCentavos: integer('monto_centavos').notNull(),
+  metodo: text('metodo', { enum: ['efectivo', 'transferencia', 'mercadopago', 'tarjeta'] }).notNull(),
+  anulado: integer('anulado', { mode: 'boolean' }).notNull().default(false),
+  anuladoEn: text('anulado_en'),
+  usuarioId: integer('usuario_id').references(() => usuarios.id),
+  creadoEn: text('creado_en').notNull().default(ahora),
+});
+
+export const torneoPartidos = sqliteTable('torneo_partidos', {
+  id: integer('id').primaryKey(),
+  torneoId: integer('torneo_id')
+    .notNull()
+    .references(() => torneos.id),
+  ronda: integer('ronda').notNull(),
+  localId: integer('local_id')
+    .notNull()
+    .references(() => torneoEquipos.id),
+  visitanteId: integer('visitante_id')
+    .notNull()
+    .references(() => torneoEquipos.id),
+  fecha: text('fecha'),
+  hora: text('hora'),
+  canchaId: integer('cancha_id').references(() => canchas.id),
+  golesLocal: integer('goles_local'),
+  golesVisitante: integer('goles_visitante'),
+});

@@ -1,5 +1,5 @@
 // Tipos que comparten el main y la ventana (lo que VUELVE del main).
-import type { METODOS, ROLES } from './esquemas';
+import type { ESTADOS_TORNEO, METODOS, ROLES } from './esquemas';
 import type { Deporte, EstadoDePago, EstadoReserva, MotivoBloqueo, Tarifa } from './canchas';
 
 export type Respuesta<T> = { ok: true; datos: T } | { ok: false; error: string };
@@ -203,4 +203,67 @@ export interface Reporte {
 export interface ResultadoAviso {
   telefono: string;
   cliente: string;
+}
+
+// ---------- Torneos ----------
+export type EstadoTorneo = (typeof ESTADOS_TORNEO)[number];
+
+export interface Torneo {
+  id: number;
+  nombre: string;
+  deporte: Deporte;
+  fechaDesde: string;
+  fechaHasta: string;
+  cuotaCentavos: number;
+  estado: EstadoTorneo;
+  nota: string;
+  bloqueoId: number | null;
+  equipos: number;
+  partidos: number;
+  partidosJugados: number;
+  /** Inscripciones cobradas (sin pagos anulados). */
+  cobradoCentavos: number;
+}
+
+export interface Equipo {
+  id: number;
+  nombre: string;
+  telefono: string;
+  pagadoCentavos: number;
+  estadoDePago: EstadoDePago;
+  pagos: PagoDeReserva[];
+}
+
+export interface Partido {
+  id: number;
+  ronda: number;
+  localId: number;
+  visitanteId: number;
+  local: string;
+  visitante: string;
+  fecha: string | null;
+  hora: string | null;
+  canchaId: number | null;
+  cancha: string | null;
+  golesLocal: number | null;
+  golesVisitante: number | null;
+}
+
+export interface Posicion {
+  equipoId: number;
+  nombre: string;
+  pj: number;
+  pg: number;
+  pe: number;
+  pp: number;
+  gf: number;
+  gc: number;
+  dg: number;
+  pts: number;
+}
+
+export interface DetalleTorneo extends Torneo {
+  listaDeEquipos: Equipo[];
+  listaDePartidos: Partido[];
+  posiciones: Posicion[];
 }

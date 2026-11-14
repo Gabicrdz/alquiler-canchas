@@ -230,3 +230,60 @@ export const esquemaBloqueo = z
   .refine((b) => (b.desde === null) === (b.hasta === null), { message: 'Elegí las dos horas, o ninguna para bloquear todo el día.', path: ['desde'] })
   .refine((b) => b.desde === null || b.hasta === null || aMinutos(b.desde) < aMinutos(b.hasta), { message: '"Desde" tiene que ser antes que "hasta".', path: ['desde'] });
 export type DatosBloqueo = z.input<typeof esquemaBloqueo>;
+
+// ---------- Torneos ----------
+export const ESTADOS_TORNEO = ['inscripcion', 'en_juego', 'terminado'] as const;
+export const NOMBRE_ESTADO_TORNEO: Record<(typeof ESTADOS_TORNEO)[number], string> = {
+  inscripcion: 'Inscripción abierta',
+  en_juego: 'En juego',
+  terminado: 'Terminado',
+};
+
+export const esquemaTorneo = z
+  .object({
+    nombre: texto('el nombre del torneo', 60),
+    deporte: z.enum(DEPORTES),
+    fechaDesde: esquemaFecha,
+    fechaHasta: esquemaFecha,
+    /** Lo que paga cada equipo por inscribirse (0 = gratis). */
+    cuotaCentavos: dinero(),
+    nota: textoOpcional(200),
+    /** Si se quiere cerrar canchas mientras dura el torneo (bloqueo con motivo "torneo"). */
+    bloquear: z.boolean().default(false),
+    /** Qué cancha cerrar (null = todas). */
+    bloqueoCanchaId: id.nullable().default(null),
+    cancelarReservas: z.boolean().default(false),
+    devolverSena: z.boolean().default(true),
+  })
+  .refine((t) => t.fechaDesde <= t.fechaHasta, { message: '"Hasta" no puede ser antes que "desde".', path: ['fechaHasta'] })
+  .refine((t) => (Date.parse(t.fechaHasta) - Date.parse(t.fechaDesde)) / 86_400_000 < 60, { message: 'Un torneo dura hasta 60 días.', path: ['fechaHasta'] });
+export type DatosTorneo = z.input<typeof esquemaTorneo>;
+
+export const esquemaEquipo = z.object({
+  torneoId: id,
+  nombre: texto('el nombre del equipo', 40),
+  telefono: textoOpcional(30),
+});
+export type DatosEquipo = z.input<typeof esquemaEquipo>;
+
+export const esquemaPagoEquipo = z.object({
+  equipoId: id,
+  montoCentavos: z.number().int().min(1, 'Escribí cuánto paga.').max(100_000_000, 'El importe es demasiado alto.'),
+  metodo: z.enum(METODOS, { message: 'Elegí cómo paga.' }),
+});
+export type DatosPagoEquipo = z.input<typeof esquemaPagoEquipo>;
+
+export const esquemaFixture = z.object({ torneoId: id, idaYVuelta: z.boolean().default(false) });
+export type DatosFixture = z.input<typeof esquemaFixture>;
+
+/** Día, hora y cancha de un partido (los tres null = sin programar). */
+export const esquemaProgramar = z
+  .object({ partidoId: id, fecha: esquemaFecha.nullable(), hora: esquemaHora.nullable(), canchaId: id.nullable() })
+  .refine((p) => (p.fecha === null) === (p.hora === null), { message: 'Elegí el día y la hora, o ninguno.', path: ['fecha'] });
+export type DatosProgramar = z.input<typeof esquemaProgramar>;
+
+const goles = z.number().int().min(0, 'Los goles no pueden ser negativos.').max(99, 'Demasiados goles.');
+export const esquemaResultado = z
+  .object({ partidoId: id, golesLocal: goles.nullable(), golesVisitante: goles.nullable() })
+  .refine((r) => (r.golesLocal === null) === (r.golesVisitante === null), { message: 'Cargá los goles de los dos equipos.', path: ['golesLocal'] });
+export type DatosResultado = z.input<typeof esquemaResultado>;

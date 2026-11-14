@@ -16,6 +16,7 @@ export const CLAVES = {
   complejo: ['complejo'],
   resumen: ['resumen'],
   reportes: ['reportes'],
+  torneos: ['torneos'],
 } as const;
 
 export const useCanchas = () => useQuery({ queryKey: CLAVES.canchas, queryFn: () => desenvolver(canchas().canchas.listar()) });
@@ -38,6 +39,11 @@ export function useReporte(rango: DatosRangoReporte) {
     placeholderData: keepPreviousData,
     staleTime: 0, // la plata cambia a cada rato: siempre se vuelve a pedir al entrar
   });
+}
+
+export const useTorneos = () => useQuery({ queryKey: CLAVES.torneos, queryFn: () => desenvolver(canchas().torneos.listar()) });
+export function useTorneo(id: number) {
+  return useQuery({ queryKey: [...CLAVES.torneos, id], queryFn: () => desenvolver(canchas().torneos.obtener(id)) });
 }
 
 export function useReservas(rango: DatosRango) {

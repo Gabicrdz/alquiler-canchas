@@ -194,3 +194,18 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Impresión: al imprimir, solo se ve la "zona de impresión" (ticket o fixture); todo lo demás se esconde. */
+.zona-impresion {
+  display: none;
+}
+@media print {
+  body > *:not(.zona-impresion) {
+    display: none !important;
+  }
+  .zona-impresion {
+    display: block;
+    background: #fff;
+    color: #000;
+  }
+}

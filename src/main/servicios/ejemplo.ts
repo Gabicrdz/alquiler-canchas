@@ -2,7 +2,7 @@
 // 3 canchas de fútbol, 2 de pádel, clientes y reservas de la semana pasada,
 // esta semana y la que viene. Los precios cambian según la franja horaria.
 import type { BaseDeDatos } from '../db/conexion';
-import { esquemaCancha, esquemaCliente, type DatosCancha } from '@compartido/esquemas';
+import { esquemaCancha, esquemaCliente, esquemaEquipo, esquemaPagoEquipo, esquemaProgramar, esquemaResultado, esquemaTorneo, type DatosCancha } from '@compartido/esquemas';
 import { bloqueoCubre, horariosDeCancha, precioDelTurno, senaSugerida, sumarMinutos } from '@compartido/canchas';
 import { fechasDeUnDia, sumarDias as sumarDiasTexto } from '@compartido/horarios';
 import type { ResultadoEjemplo } from '@compartido/tipos';
@@ -13,6 +13,7 @@ import { guardarCliente } from './clientes';
 import { resumen } from './complejo';
 import { ErrorDeUsuario } from './errores';
 import { fechaLocal, horaLocal } from './fechas';
+import { agregarEquipo, cargarResultado, cobrarEquipo, crearTorneo, generarFixture, partidosDelTorneo, programarPartido } from './torneos';
 import { guardarUsuario, listarUsuarios } from './usuarios';
 
 const $ = (pesos: number) => pesos * 100;
@@ -206,6 +207,26 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
         }
       }
     }
+
+    // Un torneo en marcha: 6 equipos, inscripción casi toda cobrada, fixture armado y las primeras fechas jugadas
+    const torneo = crearTorneo(
+      db,
+      esquemaTorneo.parse({ nombre: 'Copa Verano', deporte: 'futbol', fechaDesde: sumarDiasTexto(hoy, -3), fechaHasta: sumarDiasTexto(hoy, 9), cuotaCentavos: $(15000), nota: 'Fútbol 5 · premio: trofeo y $ 60.000' }),
+      ahora,
+    );
+    const equipos = ['Los Halcones FC', 'Club Social Sur', 'Los Pibes del Barrio', 'Deportivo Norte', 'Atlético Formosa', 'Real Siesta'].map((nombre) => agregarEquipo(db, esquemaEquipo.parse({ torneoId: torneo, nombre })));
+    equipos.forEach((equipoId, i) => {
+      if (i === 5) return; // el último todavía no pagó
+      cobrarEquipo(db, esquemaPagoEquipo.parse({ equipoId, montoCentavos: i === 4 ? $(5000) : $(15000), metodo: metodos[i % metodos.length]! }), yo?.id ?? null, ahora);
+    });
+    generarFixture(db, { torneoId: torneo, idaYVuelta: false });
+    const cancha3 = canchas.find((c) => c.nombre === 'Cancha 3')!;
+    partidosDelTorneo(db, torneo).forEach((p, i) => {
+      if (p.ronda > 3) return;
+      const dia = sumarDiasTexto(hoy, p.ronda - 3);
+      programarPartido(db, esquemaProgramar.parse({ partidoId: p.id, fecha: dia, hora: ['16:00', '17:00', '18:00'][i % 3]!, canchaId: cancha3.id }));
+      if (p.ronda <= 2) cargarResultado(db, esquemaResultado.parse({ partidoId: p.id, golesLocal: Math.floor(semilla(i + 3100) * 5), golesVisitante: Math.floor(semilla(i + 3200) * 4) }));
+    });
   })();
   return { ...resumen(db), usuarios };
 }
