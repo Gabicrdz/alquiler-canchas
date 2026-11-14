@@ -150,6 +150,17 @@ export const esquemaRango = z
   });
 export type DatosRango = z.input<typeof esquemaRango>;
 
+/** El rango de un reporte: hasta un año (los reportes suman, no dibujan la grilla). */
+export const esquemaRangoReporte = z
+  .object({ desde: esquemaFecha, hasta: esquemaFecha })
+  .refine((r) => r.desde <= r.hasta, { message: '"Hasta" no puede ser antes que "desde".' })
+  .refine((r) => (Date.parse(r.hasta) - Date.parse(r.desde)) / 86_400_000 < 366, { message: 'Los reportes son de un año como máximo.' });
+export type DatosRangoReporte = z.input<typeof esquemaRangoReporte>;
+
+/** Un aviso por WhatsApp sobre una reserva. */
+export const esquemaAviso = z.object({ reservaId: id, tipo: z.enum(['recordatorio', 'cobro'], { message: 'Elegí el tipo de aviso.' }) });
+export type DatosAviso = z.input<typeof esquemaAviso>;
+
 // ---------- Usuarios ----------
 export const ROLES = ['admin', 'encargado'] as const;
 

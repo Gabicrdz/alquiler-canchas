@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { CLAVES, useAccion, useCanchas } from '@/features/comun/consultas';
 import { useUsuario } from '@/features/sesion/consultas';
 import { COLOR } from './estilos';
+import { BotonAviso } from '@/features/reportes/boton-aviso';
 import { DialogoMover } from './dialogo-mover';
 
 export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Reserva | null; cancha: Cancha | undefined; hoy: string; alCerrar: () => void }) {
@@ -211,6 +212,8 @@ export function DetalleReserva({ reserva, cancha, hoy, alCerrar }: { reserva: Re
                     <Undo2 aria-hidden="true" /> Volver a pendiente
                   </Button>
                 )}
+                {reserva.estado === 'reservada' && <BotonAviso reservaId={reserva.id} tipo="recordatorio">Recordar por WhatsApp</BotonAviso>}
+                {saldo > 0 && reserva.estado !== 'cancelada' && <BotonAviso reservaId={reserva.id} tipo="cobro">Reclamar saldo</BotonAviso>}
                 {reserva.estado === 'reservada' && reserva.fecha > hoy && (
                   <span className="flex items-center gap-1.5 text-[13px] text-tinta-suave">
                     <CalendarClock className="size-4" aria-hidden="true" /> Se marca como jugada el día del partido

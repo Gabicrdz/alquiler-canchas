@@ -166,3 +166,41 @@ export interface ResultadoBloqueo {
   /** Cuántas reservas se cancelaron para poder bloquear. */
   canceladas: number;
 }
+
+// ---------- Reportes ----------
+export interface ResumenReporte {
+  /** Reservas del período que no se cancelaron. */
+  reservas: number;
+  jugadas: number;
+  ausentes: number;
+  pendientes: number;
+  canceladas: number;
+  /** Turnos que las canchas ofrecían (sin los bloqueados) y cuántos se ocuparon. */
+  turnosDisponibles: number;
+  turnosOcupados: number;
+  /** 0 a 1. */
+  ocupacion: number;
+  /** Plata que entró en el período (por fecha del cobro, sin pagos anulados). */
+  cobradoCentavos: number;
+  /** Lo que falta cobrar de turnos ya jugados del período. */
+  porCobrarCentavos: number;
+}
+
+export interface Reporte {
+  desde: string;
+  hasta: string;
+  resumen: ResumenReporte;
+  porMetodo: { metodo: MetodoPago; centavos: number; cobros: number }[];
+  porCancha: { canchaId: number; nombre: string; deporte: string; reservas: number; turnosDisponibles: number; ocupacion: number; cobradoCentavos: number }[];
+  porDia: { fecha: string; cobradoCentavos: number; reservas: number }[];
+  /** Día de la semana (1 a 7) × hora de inicio: cuánto se ocupó cada franja. */
+  mapa: { dia: number; hora: string; ocupados: number; disponibles: number }[];
+  topClientes: { clienteId: number; nombre: string; reservas: number; gastoCentavos: number }[];
+  deudores: { reservaId: number; clienteId: number; cliente: string; telefono: string; cancha: string; fecha: string; desde: string; saldoCentavos: number }[];
+}
+
+/** Lo que devuelve "avisar por WhatsApp": el programa abre WhatsApp y cuenta a quién. */
+export interface ResultadoAviso {
+  telefono: string;
+  cliente: string;
+}

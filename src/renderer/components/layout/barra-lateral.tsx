@@ -2,7 +2,7 @@
 // complejo arriba, secciones al medio (según el rol), y abajo Ajustes y quién
 // está usando el sistema.
 import { NavLink } from 'react-router';
-import { CalendarDays, Goal, Repeat, Lock, Settings, UsersRound, type LucideIcon } from 'lucide-react';
+import { CalendarDays, ChartNoAxesColumn, Goal, Repeat, Lock, Settings, UsersRound, type LucideIcon } from 'lucide-react';
 import { NOMBRE_ROL } from '@compartido/tipos';
 import { Button } from '@/components/ui/button';
 import { Iniciales } from '@/features/sesion/iniciales';
@@ -18,6 +18,7 @@ const SECCIONES: { ruta: string; nombre: string; icono: LucideIcon; soloAdmin?: 
   { ruta: '/abonos', nombre: 'Abonos', icono: Repeat },
   { ruta: '/clientes', nombre: 'Clientes', icono: UsersRound },
   { ruta: '/canchas', nombre: 'Canchas', icono: Goal, soloAdmin: true },
+  { ruta: '/reportes', nombre: 'Reportes', icono: ChartNoAxesColumn, soloAdmin: true },
 ];
 
 function Enlace({ ruta, nombre, icono: Icono }: Omit<(typeof SECCIONES)[number], 'soloAdmin'>) {

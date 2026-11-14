@@ -2,6 +2,8 @@
 // y qué devuelven. El preload lo implementa; la ventana lo usa como window.canchas.
 import type {
   DatosAbono,
+  DatosAviso,
+  DatosRangoReporte,
   DatosBloqueo,
   DatosBuscarClientes,
   DatosCancelacion,
@@ -16,7 +18,7 @@ import type {
   DatosUsuario,
 } from './esquemas';
 import type { EstadoReserva } from './canchas';
-import type { Abono, Bloqueo, Cancha, Cliente, Complejo, CopiaElegida, EstadoCopias, InfoCopia, InfoSistema, Reserva, Respuesta, ResultadoAbono, ResultadoBloqueo, ResultadoEjemplo, Resumen, Usuario } from './tipos';
+import type { Abono, Bloqueo, Cancha, Cliente, Complejo, CopiaElegida, EstadoCopias, InfoCopia, InfoSistema, Reporte, Reserva, Respuesta, ResultadoAbono, ResultadoAviso, ResultadoBloqueo, ResultadoEjemplo, Resumen, Usuario } from './tipos';
 
 export interface ApiCanchas {
   sesion: {
@@ -68,6 +70,14 @@ export interface ApiCanchas {
     afectadas(datos: DatosBloqueo): Promise<Respuesta<number>>;
     crear(datos: DatosBloqueo): Promise<Respuesta<ResultadoBloqueo>>;
     quitar(id: number): Promise<Respuesta<null>>;
+  };
+  reportes: {
+    /** Ocupación, ingresos y deudores de un período (solo administración). */
+    obtener(rango: DatosRangoReporte): Promise<Respuesta<Reporte>>;
+  };
+  whatsapp: {
+    /** Abre WhatsApp con el mensaje escrito para el cliente de esa reserva. */
+    avisar(datos: DatosAviso): Promise<Respuesta<ResultadoAviso>>;
   };
   pagos: {
     registrar(datos: DatosPago): Promise<Respuesta<number>>;
@@ -122,6 +132,8 @@ export const CANALES = {
   bloqueosAfectadas: 'bloqueos:afectadas',
   bloqueosCrear: 'bloqueos:crear',
   bloqueosQuitar: 'bloqueos:quitar',
+  reportesObtener: 'reportes:obtener',
+  whatsappAvisar: 'whatsapp:avisar',
   pagosRegistrar: 'pagos:registrar',
   pagosAnular: 'pagos:anular',
   complejoObtener: 'complejo:obtener',

@@ -4,7 +4,7 @@
 //      main: esconder un botón en la ventana no alcanza, porque la ventana
 //      podría pedir cualquier cosa;
 //   2. valida lo que llega con Zod ANTES de tocar la base de datos.
-import { ipcMain } from 'electron';
+import { ipcMain, shell } from 'electron';
 import { z, type ZodType } from 'zod';
 import { CANALES } from '@compartido/api';
 import {
@@ -14,6 +14,8 @@ import {
   esquemaCliente,
   esquemaComplejo,
   esquemaAbono,
+  esquemaAviso,
+  esquemaRangoReporte,
   esquemaBloqueo,
   esquemaEstado,
   esquemaMover,
@@ -34,6 +36,8 @@ import { cancelarReserva, cambiarEstado, crearReserva, moverReserva, reservasDel
 import { fechaLocal } from './servicios/fechas';
 import { crearAbono, extenderAbonos, listarAbonos, terminarAbono } from './servicios/abonos';
 import { bloqueosDelRango, contarAfectadas, crearBloqueo, listarBloqueos, quitarBloqueo } from './servicios/bloqueos';
+import { obtenerReporte } from './servicios/reportes';
+import { prepararAviso } from './servicios/whatsapp';
 import { anularPago, registrarPago } from './servicios/pagos';
 import { guardarComplejo, obtenerComplejo, resumen } from './servicios/complejo';
 import { cargarEjemplo } from './servicios/ejemplo';
@@ -159,6 +163,14 @@ export function registrarCanales(info: () => InfoSistema): void {
   manejar(CANALES.bloqueosQuitar, 'sesion', z.tuple([id]), (bid) => {
     quitarBloqueo(db(), bid);
     return null;
+  });
+
+  // ── Reportes (solo administración) y WhatsApp ──
+  manejar(CANALES.reportesObtener, 'admin', z.tuple([esquemaRangoReporte]), (rango) => obtenerReporte(db(), rango));
+  manejar(CANALES.whatsappAvisar, 'sesion', z.tuple([esquemaAviso]), async (datos) => {
+    const { url, telefono, cliente } = prepararAviso(db(), datos);
+    await shell.openExternal(url); // solo https://wa.me/…: la ventana nunca elige la dirección
+    return { telefono, cliente };
   });
 
   manejar(CANALES.pagosRegistrar, 'sesion', z.tuple([esquemaPago]), (datos, yo) => registrarPago(db(), datos, yo.id));

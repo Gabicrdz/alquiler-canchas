@@ -140,7 +140,7 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
     const insertar = db.$client.prepare(
       `INSERT INTO reservas (cancha_id, cliente_id, fecha, desde, hasta, estado, precio_centavos, dado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    const pagar = db.$client.prepare(`INSERT INTO pagos (reserva_id, monto_centavos, metodo, usuario_id) VALUES (?, ?, ?, ?)`);
+    const pagar = db.$client.prepare(`INSERT INTO pagos (reserva_id, monto_centavos, metodo, usuario_id, creado_en) VALUES (?, ?, ?, ?, ?)`);
     const metodos = ['efectivo', 'transferencia', 'mercadopago', 'efectivo', 'tarjeta'] as const;
 
     // Abonos (turnos fijos con un 10 % de descuento) y dos bloqueos: se cargan ANTES que las
@@ -170,8 +170,8 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
     );
 
     let n = 0;
-    // Una semana atrás y dos adelante: el lunes de esta semana ± unos días
-    for (let d = -7; d <= 14; d++) {
+    // Un mes atrás y dos semanas adelante: así los reportes de "últimos 30 días" tienen qué mostrar
+    for (let d = -30; d <= 14; d++) {
       const dia = sumarDias(ahora, d);
       const fecha = fechaLocal(dia);
       const finde = dia.getDay() === 0 || dia.getDay() === 6;
@@ -191,11 +191,17 @@ export function cargarEjemplo(db: BaseDeDatos, ahora: Date = new Date()): Result
           const estado = pasada ? (azar < 0.08 ? 'ausente' : 'jugada') : 'reservada';
           const reserva = Number(insertar.run(cancha.id, cliente, fecha, desde, hasta, estado, precio, yo?.id ?? null).lastInsertRowid);
           const metodo = metodos[Math.floor(semilla(n + 1300) * metodos.length)]!;
-          if (estado === 'jugada') pagar.run(reserva, precio, metodo, yo?.id ?? null);
-          else if (estado === 'ausente') pagar.run(reserva, senaSugerida(precio, 30), 'transferencia', yo?.id ?? null);
+          // Los pagos llevan fecha de verdad (el día del partido, o la seña unos días antes):
+          // si no, los reportes del ejemplo mostrarían todo cobrado "hoy".
+          const cuando = (dia: string) => `${dia} 12:00:00`;
+          if (estado === 'jugada') {
+            // Casi todas pagas; algunas quedaron debiendo (para probar "Reclamar saldo")
+            const debe = azar >= 0.08 && azar < 0.16 && fecha < hoy;
+            pagar.run(reserva, debe ? senaSugerida(precio, 30) : precio, metodo, yo?.id ?? null, cuando(fecha));
+          } else if (estado === 'ausente') pagar.run(reserva, senaSugerida(precio, 30), 'transferencia', yo?.id ?? null, cuando(sumarDiasTexto(fecha, -2)));
           else if (semilla(n + 1700) < 0.7) {
             // Las próximas, casi todas con seña; algunas pagas del todo
-            pagar.run(reserva, azar < 0.2 ? precio : senaSugerida(precio, 30), metodo, yo?.id ?? null);
+            pagar.run(reserva, azar < 0.2 ? precio : senaSugerida(precio, 30), metodo, yo?.id ?? null, cuando(sumarDiasTexto(hoy, -Math.floor(semilla(n + 2100) * 7))));
           }
         }
       }

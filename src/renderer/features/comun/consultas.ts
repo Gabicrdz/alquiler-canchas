@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { DatosBuscarClientes, DatosRango } from '@compartido/esquemas';
+import type { DatosBuscarClientes, DatosRango, DatosRangoReporte } from '@compartido/esquemas';
 import { desenvolver, canchas } from '@/lib/api';
 
 export const CLAVES = {
@@ -15,6 +15,7 @@ export const CLAVES = {
   bloqueos: ['bloqueos'],
   complejo: ['complejo'],
   resumen: ['resumen'],
+  reportes: ['reportes'],
 } as const;
 
 export const useCanchas = () => useQuery({ queryKey: CLAVES.canchas, queryFn: () => desenvolver(canchas().canchas.listar()) });
@@ -26,6 +27,16 @@ export function useClientes(filtro: DatosBuscarClientes) {
     queryKey: [...CLAVES.clientes, filtro],
     queryFn: () => desenvolver(canchas().clientes.buscar(filtro)),
     placeholderData: keepPreviousData, // mientras busca, se sigue viendo la lista anterior
+  });
+}
+
+/** El reporte de un período (solo administración). Cada cambio de período es una consulta nueva. */
+export function useReporte(rango: DatosRangoReporte) {
+  return useQuery({
+    queryKey: [...CLAVES.reportes, rango],
+    queryFn: () => desenvolver(canchas().reportes.obtener(rango)),
+    placeholderData: keepPreviousData,
+    staleTime: 0, // la plata cambia a cada rato: siempre se vuelve a pedir al entrar
   });
 }
 

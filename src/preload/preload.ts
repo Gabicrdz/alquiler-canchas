@@ -47,6 +47,12 @@ const api: ApiCanchas = {
     crear: (datos) => pedir(CANALES.bloqueosCrear, datos),
     quitar: (id) => pedir(CANALES.bloqueosQuitar, id),
   },
+  reportes: {
+    obtener: (rango) => pedir(CANALES.reportesObtener, rango),
+  },
+  whatsapp: {
+    avisar: (datos) => pedir(CANALES.whatsappAvisar, datos),
+  },
   pagos: {
     registrar: (datos) => pedir(CANALES.pagosRegistrar, datos),
     anular: (id) => pedir(CANALES.pagosAnular, id),
