@@ -1,0 +1,190 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/bricolage-grotesque/wdth.css';
+@import '@fontsource-variable/figtree';
+
+/*
+  Diseño "tarde de partido": verde césped para el fútbol y azul cristal para el pádel.
+  - Fondo verde muy claro, barra lateral verde pino oscuro con las líneas de una cancha.
+  - Bricolage Grotesque (grande, deportiva) para títulos y números; Figtree para el resto.
+  - Un toque de amarillo pelota, solo para "hoy" y la hora actual.
+  - Cada cancha se reconoce por color: verde = fútbol, azul = pádel.
+*/
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+
+  --fondo: #edf5ee;
+  --superficie: #ffffff;
+  --lateral: #0b2a1e;
+  --tinta: #10281d;
+  --tinta-suave: #50685a;
+  --linea: #d5e3d8;
+  --linea-fuerte: #bcd0c1;
+  --acento: #0d7a45;
+  --acento-fuerte: #095c33;
+  --acento-suave: #ddf1e4;
+  --dato: #1f9a5b;
+  --dato-activo: #0d7a45;
+  --verde: #1f7a45;
+  --verde-suave: #e0f2e6;
+  --ambar: #8f5600;
+  --ambar-suave: #fbf0d9;
+  --rojo: #b3322a;
+  --rojo-suave: #fbe8e6;
+
+  /* Fútbol: césped */
+  --fut: #0f6b3a;
+  --fut-fuerte: #0a4f2b;
+  --fut-suave: #dff1e4;
+  --fut-franja-a: #e6f4e9;
+  --fut-franja-b: #d9eddf;
+  /* Pádel: cristal azul */
+  --pad: #1b5fb5;
+  --pad-fuerte: #134a92;
+  --pad-suave: #dfecfa;
+  --pad-franja-a: #e5eefa;
+  --pad-franja-b: #d8e6f7;
+  /* Pelota */
+  --pelota: #d8f24a;
+  --pelota-fuerte: #aac81a;
+
+  /* Nombres que esperan los componentes de shadcn/ui */
+  --background: var(--fondo);
+  --foreground: var(--tinta);
+  --card: var(--superficie);
+  --card-foreground: var(--tinta);
+  --popover: var(--superficie);
+  --popover-foreground: var(--tinta);
+  --primary: var(--acento);
+  --primary-foreground: #ffffff;
+  --secondary: #e3eee6;
+  --secondary-foreground: var(--tinta);
+  --muted: #ebf3ed;
+  --muted-foreground: var(--tinta-suave);
+  --accent: #e7f1ea;
+  --accent-foreground: var(--tinta);
+  --destructive: var(--rojo);
+  --border: var(--linea);
+  --input: var(--linea-fuerte);
+  --ring: var(--acento);
+}
+
+@theme inline {
+  --font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-superficie: var(--superficie);
+  --color-lateral: var(--lateral);
+  --color-linea: var(--linea);
+  --color-linea-fuerte: var(--linea-fuerte);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-acento: var(--acento);
+  --color-acento-fuerte: var(--acento-fuerte);
+  --color-acento-suave: var(--acento-suave);
+  --color-dato: var(--dato);
+  --color-dato-activo: var(--dato-activo);
+  --color-verde: var(--verde);
+  --color-verde-suave: var(--verde-suave);
+  --color-ambar: var(--ambar);
+  --color-ambar-suave: var(--ambar-suave);
+  --color-rojo: var(--rojo);
+  --color-rojo-suave: var(--rojo-suave);
+  --color-fut: var(--fut);
+  --color-fut-fuerte: var(--fut-fuerte);
+  --color-fut-suave: var(--fut-suave);
+  --color-pad: var(--pad);
+  --color-pad-fuerte: var(--pad-fuerte);
+  --color-pad-suave: var(--pad-suave);
+  --color-pelota: var(--pelota);
+  --color-pelota-fuerte: var(--pelota-fuerte);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #raiz {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 15px;
+    user-select: none;
+  }
+  input,
+  textarea {
+    user-select: text;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer utilities {
+  .numeros {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Los números grandes (hora, precios) usan la versión más angosta y firme de la tipografía */
+  .marcador {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-stretch: 80%;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  /* Césped "recién cortado": una franja clara y otra oscura por cada hora (--hora = alto de una hora) */
+  .cesped-futbol {
+    background-image: repeating-linear-gradient(to bottom, var(--fut-franja-a) 0, var(--fut-franja-a) var(--hora), var(--fut-franja-b) var(--hora), var(--fut-franja-b) calc(var(--hora) * 2));
+  }
+  .cesped-padel {
+    background-image: repeating-linear-gradient(to bottom, var(--pad-franja-a) 0, var(--pad-franja-a) var(--hora), var(--pad-franja-b) var(--hora), var(--pad-franja-b) calc(var(--hora) * 2));
+  }
+  /* Fuera del horario de la cancha: rayado gris */
+  .cerrado {
+    background-image: repeating-linear-gradient(135deg, rgb(16 40 29 / 0.07) 0 6px, transparent 6px 12px);
+    background-color: rgb(16 40 29 / 0.05);
+  }
+  /* "No vino": rayas rojas */
+  .rayas-rojas {
+    background-image: repeating-linear-gradient(135deg, rgb(179 50 42 / 0.16) 0 6px, transparent 6px 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
